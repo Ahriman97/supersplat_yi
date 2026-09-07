@@ -24,7 +24,7 @@ To initialize a local development environment for SuperSplat, ensure you have [N
 
    ```sh
    git clone https://github.com/Ahriman97/supersplat_yi.git
-   cd supersplat
+   cd supersplat_yi
    ```
 
 2. Install dependencies:
