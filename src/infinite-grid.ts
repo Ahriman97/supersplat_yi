@@ -39,7 +39,7 @@ class InfiniteGrid extends Element {
     depthState = new DepthState(FUNC_LESSEQUAL, true);
 
     visible = true;
-    plane: GridPlane = 'xy';
+    plane: GridPlane = 'xz';
 
     constructor() {
         super(ElementType.debug);

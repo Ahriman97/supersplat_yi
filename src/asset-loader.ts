@@ -1,5 +1,5 @@
 import { ReadFileSystem } from '@playcanvas/splat-transform';
-import { AppBase, Asset, GSplatData, GSplatResource } from 'playcanvas';
+import { AppBase, Asset, GSplatData, GSplatResource, Quat } from 'playcanvas';
 
 import { Events } from './events';
 import { defaultLodIndex, loadGSplatData, validateGSplatData } from './io';
@@ -73,7 +73,16 @@ class AssetLoader {
 
             const asset = this.createGSplatAsset(gsplatData, filename);
 
-            return new Splat(asset, transform.rotation);
+            //return new Splat(asset, transform.rotation);
+            const splat = new Splat(asset, transform.rotation);
+
+            // Добавляем принудительный поворот на 90° вокруг X
+            const currentRot = splat.entity.getLocalRotation();
+            const forcedRotation = new Quat();
+            forcedRotation.setFromEulerAngles(90, 0, 0);
+            splat.entity.setLocalRotation(currentRot.mul(forcedRotation));
+
+            return splat;
         } finally {
             if (!animationFrame) {
                 this.events.fire('stopSpinner');

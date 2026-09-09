@@ -18,7 +18,7 @@ class PointerController {
 
         // Orbit mode: rotate camera around the focal point
         const orbit = (dx: number, dy: number) => {
-            const azim = camera.azim + dx * camera.scene.config.controls.orbitSensitivity;
+            const azim = camera.azim - dx * camera.scene.config.controls.orbitSensitivity;
             const elev = camera.elevation - dy * camera.scene.config.controls.orbitSensitivity;
             camera.setAzimElev(azim, elev);
         };
@@ -406,7 +406,7 @@ class PointerController {
                 // Forward/backward along the Z-up horizontal (XY) plane.
                 if (forward) {
                     const zAxis = worldTransform.getZ();
-                    zAxis.z = 0;
+                    zAxis.y = 0;
                     zAxis.normalize();
                     moveVec.add(zAxis.mulScalar(-forward * factor));
                 }
@@ -414,14 +414,14 @@ class PointerController {
                 // Strafe left/right (horizontal)
                 if (strafe) {
                     const xAxis = worldTransform.getX();
-                    xAxis.z = 0;
+                    xAxis.y = 0;
                     xAxis.normalize();
                     moveVec.add(xAxis.mulScalar(strafe * factor));
                 }
 
                 // Up/down in world space
                 if (vertical) {
-                    moveVec.z += vertical * factor;
+                    moveVec.y += vertical * factor;
                 }
 
                 // Move the focal point (camera follows due to orbit calculation)

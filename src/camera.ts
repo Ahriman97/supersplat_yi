@@ -46,7 +46,6 @@ const vecb = new Vec3();
 const va = new Vec3();
 const m = new Mat4();
 const v4 = new Vec4();
-const WORLD_UP = new Vec3(0, 0, 1);
 
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
@@ -66,11 +65,11 @@ class Camera extends Element {
         const c1 = Math.cos(-ex);
         const s2 = Math.sin(-ey);
         const c2 = Math.cos(-ey);
-        result.set(-c1 * s2, c1 * c2, s1);
+        result.set(-c1 * s2, s1, c1 * c2);
     }
 
     controller: PointerController;
-    focalPointTween = new TweenValue({ x: 0, y: 0, z: 0.5 });
+    focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });
     azimElevTween = new TweenValue({ azim: 30, elev: -15 });
     distanceTween = new TweenValue({ distance: 1 });
 
@@ -234,7 +233,7 @@ class Camera extends Element {
         Camera.calcForwardVec(forwardVec, this.azim, this.elevation);
         const cameraPos = this.focalPoint.add(forwardVec.clone().mulScalar(d));
 
-        const azim = this.azim + dx * sensitivity;
+        const azim = this.azim - dx * sensitivity;
         const elev = this.elevation - dy * sensitivity;
 
         Camera.calcForwardVec(forwardVec, azim, elev);
@@ -279,8 +278,8 @@ class Camera extends Element {
     setPose(position: Vec3, target: Vec3, dampingFactorFactor: number = 1) {
         vec.sub2(target, position);
         const l = vec.length();
-        const azim = Math.atan2(-vec.x / l, -vec.y / l) * math.RAD_TO_DEG;
-        const elev = Math.asin(vec.z / l) * math.RAD_TO_DEG;
+        const azim = Math.atan2(-vec.x / l, -vec.z / l) * math.RAD_TO_DEG;
+        const elev = Math.asin(vec.y / l) * math.RAD_TO_DEG;
         this.setFocalPoint(target, dampingFactorFactor);
         this.setAzimElev(azim, elev, dampingFactorFactor);
         this.setDistance(l / this.sceneRadius * this.fovFactor, dampingFactorFactor);
@@ -621,10 +620,7 @@ class Camera extends Element {
             this.mainCamera.setLocalPosition(cameraPosition);
             // Z-up editor convention. Looking at the focal point also avoids
             // baking Y-up assumptions into Euler-axis order.
-            const up = Math.abs(forwardVec.z) > 0.9999 ? Vec3.UP : WORLD_UP;
-            const focal = this.focalPointTween.value;
-            vec.set(focal.x, focal.y, focal.z);
-            this.mainCamera.lookAt(vec, up);
+            this.mainCamera.setLocalEulerAngles(azimElev.elev, azimElev.azim, 0);
 
             this.fitClippingPlanes(this.mainCamera.getLocalPosition(), this.mainCamera.forward);
 

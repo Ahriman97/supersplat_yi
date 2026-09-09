@@ -130,7 +130,7 @@ class CameraPoseGizmos extends Element {
             if (Math.abs(tmpForward.y) > 0.999) {
                 tmpRight.cross(tmpForward, Vec3.BACK).normalize();
             } else {
-                tmpRight.cross(tmpForward, Vec3.BACK).normalize();
+                tmpRight.cross(tmpForward, Vec3.UP).normalize();
             }
 
             // up direction
