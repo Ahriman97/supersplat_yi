@@ -51,7 +51,7 @@ if not exist "%SHORTCUT%" (
 REM ============================================================
 REM  Проверка папки проекта
 REM ============================================================
-set "PROJECT_DIR=%USERPROFILE%\Documents\work\supersplat_yi"
+set "PROJECT_DIR=%USERPROFILE%\Documents\supersplat_yi"
 if not exist "%PROJECT_DIR%" (
     echo [ОШИБКА] Папка не найдена: %PROJECT_DIR%
     pause
