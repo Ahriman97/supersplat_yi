@@ -6,7 +6,7 @@ const DEFAULT_SELECTED_CLR: Color = { r: 1, g: 1, b: 0, a: 1 };
 const DEFAULT_UNSELECTED_CLR: Color = { r: 0, g: 0, b: 1, a: 0.5 };
 //const DEFAULT_LOCKED_CLR: Color = { r: 0, g: 0, b: 0, a: 0.05 };
 
-const DEFAULT_LOCKED_CLR: Color = { r: 1, g: 1, b: 1, a: 0 };
+const DEFAULT_LOCKED_CLR: Color = { r: 1, g: 1, b: 1, a: 1 };
 // default config
 const sceneConfig = {
     bgClr: DEFAULT_BG_CLR,
