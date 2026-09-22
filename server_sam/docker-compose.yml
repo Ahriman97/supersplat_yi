@@ -1,0 +1,22 @@
+services:
+  sam-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sam-server
+    ports:
+      - "8000:8000"
+    environment:
+      - SAM_MODEL_TYPE=vit_b
+      - SAM_MODEL_PATH=models/sam_vit_b_01ec64.pth
+      - SAM_DEVICE=cuda
+    volumes:
+      - ./models:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped

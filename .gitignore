@@ -7,3 +7,12 @@
 dist
 node_modules
 supersplat_launcher1.bat
+# SAM model checkpoint (375 MB) — скачивается автоматически при сборке
+server_sam/models/
+# Хеш Docker-образа SAM-сервера
+server_sam/.server_hash
+# Артефакты тестов
+server_sam/test.png
+server_sam/test.jpg
+server_sam/mask.png
+server_sam/headers.txt
