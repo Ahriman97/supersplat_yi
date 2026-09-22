@@ -145,8 +145,35 @@ REM  [5/6] Smoke-тест SAM
 REM ============================================================
 echo.
 echo [5/6] Запускаем smoke-тест SAM-сервера...
+
+REM Ищем Git Bash. В PATH часто стоит WSL-заглушка bash.exe,
+REM которая падает с ошибкой WSL. Поэтому используем полный путь.
+set "BASH_EXE="
+set "GIT_USR_BIN="
+if exist "C:\Program Files\Git\usr\bin\bash.exe" set "BASH_EXE=C:\Program Files\Git\usr\bin\bash.exe" & set "GIT_USR_BIN=C:\Program Files\Git\usr\bin"
+if not defined BASH_EXE if exist "C:\Program Files\Git\bin\bash.exe" set "BASH_EXE=C:\Program Files\Git\bin\bash.exe" & set "GIT_USR_BIN=C:\Program Files\Git\usr\bin"
+if not defined BASH_EXE if exist "C:\Program Files (x86)\Git\usr\bin\bash.exe" set "BASH_EXE=C:\Program Files (x86)\Git\usr\bin\bash.exe" & set "GIT_USR_BIN=C:\Program Files (x86)\Git\usr\bin"
+if not defined BASH_EXE if exist "C:\Program Files (x86)\Git\bin\bash.exe" set "BASH_EXE=C:\Program Files (x86)\Git\bin\bash.exe" & set "GIT_USR_BIN=C:\Program Files (x86)\Git\usr\bin"
+if not defined BASH_EXE if exist "%LOCALAPPDATA%\Programs\Git\usr\bin\bash.exe" set "BASH_EXE=%LOCALAPPDATA%\Programs\Git\usr\bin\bash.exe" & set "GIT_USR_BIN=%LOCALAPPDATA%\Programs\Git\usr\bin"
+if not defined BASH_EXE if exist "%LOCALAPPDATA%\Programs\Git\bin\bash.exe" set "BASH_EXE=%LOCALAPPDATA%\Programs\Git\bin\bash.exe" & set "GIT_USR_BIN=%LOCALAPPDATA%\Programs\Git\usr\bin"
+
+if not defined BASH_EXE (
+    echo.
+    echo [ОШИБКА] Git Bash не найден.
+    echo         Установите Git for Windows: https://git-scm.com/download/win
+    pause
+    exit /b 1
+)
+
+REM Добавляем Unix-утилиты Git Bash в PATH, чтобы dirname/awk/sed
+REM были доступны при запуске bash.exe из cmd.exe
+set "PATH=%PATH%;!GIT_USR_BIN!"
+
+echo       Используем Git Bash: !BASH_EXE!
+echo       Unix-утилиты: !GIT_USR_BIN!
+
 cd /d "%SERVER_DIR%"
-bash tests/test_smoke.sh
+"!BASH_EXE!" tests/test_smoke.sh
 if errorlevel 1 (
     echo.
     echo [ОШИБКА] Smoke-тест SAM-сервера не прошёл.
