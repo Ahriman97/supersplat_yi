@@ -319,6 +319,7 @@
     "tooltip.bottom-toolbar.lasso-selection": "Выделение лассо",
     "tooltip.bottom-toolbar.polygon-selection": "Выделение полигоном",
     "tooltip.bottom-toolbar.brush-selection": "Выделение кистью",
+    "tooltip.bottom-toolbar.sam-selection": "Умное выделение SAM",
     "tooltip.bottom-toolbar.flood-selection": "Заливка выделением",
     "tooltip.bottom-toolbar.eyedropper-selection": "Выделение пипеткой",
     "tooltip.bottom-toolbar.sphere-selection": "Выделение сферой",

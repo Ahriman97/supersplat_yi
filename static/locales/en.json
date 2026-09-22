@@ -319,6 +319,7 @@
     "tooltip.bottom-toolbar.lasso-selection": "Lasso Selection",
     "tooltip.bottom-toolbar.polygon-selection": "Polygon Selection",
     "tooltip.bottom-toolbar.brush-selection": "Brush Selection",
+    "tooltip.bottom-toolbar.sam-selection": "SAM Selection (AI)",
     "tooltip.bottom-toolbar.flood-selection": "Flood Selection",
     "tooltip.bottom-toolbar.eyedropper-selection": "Eyedropper Selection",
     "tooltip.bottom-toolbar.sphere-selection": "Sphere Selection",

@@ -18,6 +18,7 @@ import boxSvg from './svg/show-hide-splats.svg';
 import undoSvg from './svg/undo.svg';
 import { Tooltips } from './tooltips';
 // import cropSvg from './svg/crop.svg';
+import samSvg from './svg/select-sam.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -61,6 +62,11 @@ class BottomToolbar extends Container {
 
         const brush = new Button({
             id: 'bottom-toolbar-brush',
+            class: 'bottom-toolbar-tool'
+        });
+
+        const sam = new Button({
+            id: 'bottom-toolbar-sam',
             class: 'bottom-toolbar-tool'
         });
 
@@ -154,6 +160,7 @@ class BottomToolbar extends Container {
         measure.dom.appendChild(createSvg(measureSvg));
         orient.dom.appendChild(createSvg(orientSvg));
         // crop.dom.appendChild(createSvg(cropSvg));
+        sam.dom.appendChild(createSvg(samSvg));
 
         this.append(undo);
         this.append(redo);
@@ -162,6 +169,7 @@ class BottomToolbar extends Container {
         this.append(lasso);
         this.append(polygon);
         this.append(brush);
+        this.append(sam); 
         this.append(flood);
         this.append(eyedropper);
         this.append(isolated);
@@ -184,6 +192,7 @@ class BottomToolbar extends Container {
         polygon.dom.addEventListener('click', () => events.fire('tool.polygonSelection'));
         lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
+        sam.dom.addEventListener('click', () => events.fire('tool.samSelection'));
         flood.dom.addEventListener('click', () => events.fire('tool.floodSelection'));
         picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
         eyedropper.dom.addEventListener('click', () => events.fire('tool.eyedropperSelection'));
@@ -221,6 +230,7 @@ class BottomToolbar extends Container {
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
             brush.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
+            sam.class[toolName === 'samSelection' ? 'add' : 'remove']('active');
             flood.class[toolName === 'floodSelection' ? 'add' : 'remove']('active');
             polygon.class[toolName === 'polygonSelection' ? 'add' : 'remove']('active');
             lasso.class[toolName === 'lassoSelection' ? 'add' : 'remove']('active');
@@ -259,6 +269,7 @@ class BottomToolbar extends Container {
         tooltips.register(lasso, tooltip('tooltip.bottom-toolbar.lasso-selection', 'tool.lassoSelection'));
         tooltips.register(polygon, tooltip('tooltip.bottom-toolbar.polygon-selection', 'tool.polygonSelection'));
         tooltips.register(brush, tooltip('tooltip.bottom-toolbar.brush-selection', 'tool.brushSelection'));
+        tooltips.register(sam, () => i18n.t('tooltip.bottom-toolbar.sam-selection'));
         tooltips.register(flood, tooltip('tooltip.bottom-toolbar.flood-selection', 'tool.floodSelection'));
         tooltips.register(sphere, tooltip('tooltip.bottom-toolbar.sphere-selection'));
         tooltips.register(box, tooltip('tooltip.bottom-toolbar.box-selection'));
