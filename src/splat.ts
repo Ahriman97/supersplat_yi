@@ -60,6 +60,7 @@ class Splat extends Element {
     selectionBoundStorage: BoundingBox;
     localBoundStorage: BoundingBox;
     worldBoundStorage: BoundingBox;
+    lastAddedMask: Uint8Array | null = null;
 
     _visible = true;
     transformPalette: TransformPalette;

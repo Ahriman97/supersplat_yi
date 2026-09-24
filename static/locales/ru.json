@@ -344,6 +344,15 @@
     "tooltip.timeline.smoothness": "Плавность",
     "tooltip.timeline.loop": "Зациклить анимацию",
 
+    "tooltip.sam.op-set-short": "Выбрать",
+    "tooltip.sam.op-add-short": "Добавить",
+    "tooltip.sam.op-remove-short": "Убрать",
+    "tooltip.sam.op-refine-short": "Уточнить",
+    "tooltip.sam.op-set": "Выделить",
+    "tooltip.sam.op-add": "Добавить к выделению",
+    "tooltip.sam.op-remove": "Убрать из выделения",
+    "tooltip.sam.op-refine": "Уточнить (сохранить только пересечение)",
+
     "tooltip.scene.solo": "Соло выбранного",
     "tooltip.scene.import": "Импортировать сцену",
     "tooltip.scene.new": "Новая сцена",

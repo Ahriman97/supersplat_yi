@@ -64,12 +64,16 @@ const popupConfig: Record<string, CategoryConfig> = {
         ],
         hints: [
             { displayKey: 'Shift', localeKey: 'popup.shortcuts.add-to-selection' },
-            { displayKey: 'Ctrl', localeKey: 'popup.shortcuts.remove-from-selection' }
+            { displayKey: 'Ctrl', localeKey: 'popup.shortcuts.remove-from-selection' },
+            { displayKey: 'Shift + Ctrl', localeKey: 'popup.shortcuts.refine-selection' }
         ]
     },
     tools: {
         localeKey: 'popup.shortcuts.tools',
         shortcuts: [
+            { id: 'tool.samSelection', localeKey: 'popup.shortcuts.sam-selection' },
+            { id: 'tool.deactivate', localeKey: 'popup.shortcuts.deactivate-tool' },
+            { id: 'tool.toggleCoordSpace', localeKey: 'popup.shortcuts.toggle-gizmo-coordinate-space' } ,
             { id: 'tool.moveShortcut', localeKey: 'popup.shortcuts.move' },
             { id: 'tool.rotateShortcut', localeKey: 'popup.shortcuts.rotate' },
             { id: 'tool.scaleShortcut', localeKey: 'popup.shortcuts.scale' },
@@ -80,10 +84,12 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'tool.floodSelection', localeKey: 'popup.shortcuts.flood-selection' },
             { id: 'tool.eyedropperSelection', localeKey: 'popup.shortcuts.eyedropper-selection' },
             { id: 'tool.deactivate', localeKey: 'popup.shortcuts.deactivate-tool' },
-            { id: 'tool.toggleCoordSpace', localeKey: 'popup.shortcuts.toggle-gizmo-coordinate-space' }
+            { id: 'tool.toggleCoordSpace', localeKey: 'popup.shortcuts.toggle-gizmo-coordinate-space' },
+            { id: 'tool.samSelection', localeKey: 'popup.shortcuts.sam-selection' }
         ],
         hints: [
-            { displayKey: '[ ]', localeKey: 'popup.shortcuts.brush-size' }
+            { displayKey: '[ ]', localeKey: 'popup.shortcuts.brush-size' },
+            { displayKey: 'Shift + Ctrl', localeKey: 'popup.shortcuts.refine-selection' }
         ]
     },
     playback: {

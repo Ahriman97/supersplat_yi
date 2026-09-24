@@ -116,7 +116,8 @@ class SelectOp extends StateOp {
     //               hit disagree, which leaves locked/deleted bits untouched.
     //   intersect — keep only splats currently selected AND in the hit mask
     //               (clear the selected bit on selected splats that are not hit).
-    constructor(splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect', sel: Uint8Array | Uint32Array) {
+    constructor(splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect' | 'refine', sel: Uint8Array | Uint32Array) {
+        console.log('[SelectOp] op =', op);
         const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
         const isHit = sel instanceof Uint32Array ? sortedPredicate(sel) : (i: number) => sel[i] === 255;
@@ -132,17 +133,34 @@ class SelectOp extends StateOp {
             add: BitOp.SET,
             remove: BitOp.CLEAR,
             set: BitOp.TOGGLE,
-            intersect: BitOp.CLEAR
+            intersect: BitOp.CLEAR,
+            refine: BitOp.CLEAR
         };
 
         const preds = {
             add: (i: number) => valid(i) && isHit(i) && state[i] === 0,
             remove: (i: number) => valid(i) && isHit(i) && state[i] === State.selected,
             set: (i: number) => valid(i) && ((state[i] === State.selected) !== isHit(i)),
-            intersect: (i: number) => valid(i) && state[i] === State.selected && !isHit(i)
+            intersect: (i: number) => valid(i) && state[i] === State.selected && !isHit(i),
+            refine: (i: number) => valid(i) && state[i] === State.selected && !isHit(i) && (splat.lastAddedMask?.[i] === 255)
         };
-
+    
         super(splat, IndexRanges.fromPredicate(splatData.numSplats, preds[op]), State.selected, bitOps[op]);
+        if (op === 'add' || op === 'set') {
+            const mask = new Uint8Array(splatData.numSplats);
+            let count = 0;
+            for (let i = 0; i < splatData.numSplats; i++) {
+                if (valid(i) && isHit(i) && state[i] !== State.selected) {
+                    mask[i] = 255;
+                    count++;
+                }
+            }
+            splat.lastAddedMask = mask;
+            console.log('[SelectOp] lastAddedMask set, count =', count);
+        }
+        if (op === 'refine') {
+            console.log('[SelectOp] refine, lastAddedMask =', splat.lastAddedMask);
+        }
     }
 }
 

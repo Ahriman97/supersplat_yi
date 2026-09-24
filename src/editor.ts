@@ -390,7 +390,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    events.on('select.mask', (op: 'add'|'remove'|'set'|'intersect', mask: Uint8Array | Uint32Array) => {
+    events.on('select.mask', (op: 'add'|'remove'|'set'|'intersect'|'refine', mask: Uint8Array | Uint32Array) => {
         selectedSplats().forEach((splat) => {
             events.fire('edit.add', new SelectOp(splat, op, mask));
         });
@@ -399,7 +399,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // run the GPU intersect + the resulting SelectOp inside one queued task so the
     // gpu readback is ordered relative to other queued history ops (rapid drag +
     // undo, drag-while-camera-settling, etc).
-    const runSelectIntersect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any) => {
+    const runSelectIntersect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect'|'refine', options: any) => {
         return scene.commandQueue.enqueue(async () => {
             const data = await scene.dataProcessor.intersect(options, splat);
             // SelectOp consumes `data` synchronously in its constructor
