@@ -21,7 +21,11 @@ REM ============================================================
 set "PROJECT_DIR=%USERPROFILE%\Documents\work\supersplat_yi"
 set "SERVER_DIR=%PROJECT_DIR%\server_sam"
 set "EDGE_PROFILE=%TEMP%\supersplat-edge-profile"
-set "SAM_URL=http://localhost:8000"
+set "SAM_PORT=8000"
+if exist "%SERVER_DIR%\.sam_port" (
+    set /p SAM_PORT=<"%SERVER_DIR%\.sam_port"
+)
+set "SAM_URL=http://localhost:!SAM_PORT!"
 
 REM ============================================================
 REM  Отключаем приветственные экраны Edge
@@ -85,7 +89,14 @@ echo.
 echo [2/6] Проверяем образ SAM-сервера...
 cd /d "%SERVER_DIR%"
 set "IMAGE_ID="
-for /f %%I in ('docker compose images -q sam-server 2^>nul') do set "IMAGE_ID=%%I"
+set "IMAGE_ID="
+for /f %%I in ('docker images -q server_sam-sam-server 2^>nul') do set "IMAGE_ID=%%I"
+if "!IMAGE_ID!"=="" (
+    for /f %%I in ('docker images -q server-sam-sam-server 2^>nul') do set "IMAGE_ID=%%I"
+)
+if "!IMAGE_ID!"=="" (
+    for /f %%I in ('docker compose images -q sam-server 2^>nul') do set "IMAGE_ID=%%I"
+)
 if "!IMAGE_ID!"=="" (
     echo.
     echo [ОШИБКА] Образ SAM-сервера не найден.
@@ -195,7 +206,7 @@ echo       Ждём 5 секунд, пока dev-сервер подниметс
 timeout /t 5 /nobreak >nul
 
 echo       Открываем Edge...
-start "" msedge.exe --user-data-dir="%EDGE_PROFILE%" --no-first-run --new-window "http://localhost:3000"
+start "" msedge.exe --user-data-dir="%EDGE_PROFILE%" --no-first-run --new-window "http://localhost:3000/?samPort=!SAM_PORT!"
 
 echo.
 echo ============================================================

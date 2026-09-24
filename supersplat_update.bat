@@ -29,10 +29,10 @@ if not exist "%SERVER_DIR%" (
 )
 
 REM ============================================================
-REM  [1/3] Обновление из git
+REM  [1/4] Обновление из git
 REM ============================================================
 echo.
-echo [1/3] Обновляем проект из git...
+echo [1/4] Обновляем проект из git...
 cd /d "%PROJECT_DIR%"
 git pull origin main
 if errorlevel 1 (
@@ -44,10 +44,56 @@ if errorlevel 1 (
 echo       Git обновлён.
 
 REM ============================================================
-REM  [2/3] Проверка Docker
+REM  [2/4] Поиск свободного порта для SAM-сервера
 REM ============================================================
 echo.
-echo [2/3] Проверяем Docker...
+echo [2/4] Ищем свободный порт для SAM-сервера...
+
+set "SAM_PORT_FILE=%SERVER_DIR%\.sam_port"
+set "ENV_FILE=%SERVER_DIR%\.env"
+set "SAM_PORT="
+
+REM Если файл порта уже есть — используем сохранённый
+if exist "%SAM_PORT_FILE%" (
+    set /p SAM_PORT=<"%SAM_PORT_FILE%"
+    if not "!SAM_PORT!"=="" (
+        echo       Используем сохранённый порт: !SAM_PORT!
+    )
+)
+
+REM Если порта нет — ищем свободный
+if "!SAM_PORT!"=="" (
+    for %%P in (8000 8001 8002 8003 8010 8080 8090 9000) do (
+        if "!SAM_PORT!"=="" (
+            netstat -an | findstr /C:":%%P " >nul 2>&1
+            if errorlevel 1 (
+                set "SAM_PORT=%%P"
+                echo       Порт %%P свободен.
+            ) else (
+                echo       Порт %%P занят.
+            )
+        )
+    )
+)
+
+if "!SAM_PORT!"=="" (
+    echo.
+    echo [ОШИБКА] Не удалось найти свободный порт.
+    echo         Освободите один из портов: 8000, 8001, 8002, 8003, 8010, 8080, 8090, 9000
+    pause
+    exit /b 1
+)
+
+REM Сохраняем порт в два файла
+echo !SAM_PORT!> "%SAM_PORT_FILE%"
+echo SAM_PORT=!SAM_PORT!> "%ENV_FILE%"
+echo       Порт сохранён: !SAM_PORT!
+
+REM ============================================================
+REM  [3/4] Проверка Docker
+REM ============================================================
+echo.
+echo [3/4] Проверяем Docker...
 docker info >nul 2>&1
 if errorlevel 1 (
     echo.
@@ -58,17 +104,22 @@ if errorlevel 1 (
 echo       Docker работает.
 
 REM ============================================================
-REM  [3/3] Проверка, нужно ли пересобирать образ
+REM  [4/4] Проверка, нужно ли пересобирать образ
 REM ============================================================
 echo.
-echo [3/3] Проверяем состояние Docker-образа SAM-сервера...
+echo [4/4] Проверяем состояние Docker-образа SAM-сервера...
 
 cd /d "%SERVER_DIR%"
 
 REM --- Уровень 1: есть ли образ вообще ---
 set "IMAGE_ID="
-for /f %%I in ('docker compose images -q sam-server 2^>nul') do set "IMAGE_ID=%%I"
-
+for /f %%I in ('docker images -q server_sam-sam-server 2^>nul') do set "IMAGE_ID=%%I"
+if "!IMAGE_ID!"=="" (
+    for /f %%I in ('docker images -q server-sam-sam-server 2^>nul') do set "IMAGE_ID=%%I"
+)
+if "!IMAGE_ID!"=="" (
+    for /f %%I in ('docker compose images -q sam-server 2^>nul') do set "IMAGE_ID=%%I"
+)
 set "NEED_BUILD=0"
 
 if "!IMAGE_ID!"=="" (

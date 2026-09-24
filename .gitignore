@@ -16,3 +16,5 @@ server_sam/test.png
 server_sam/test.jpg
 server_sam/mask.png
 server_sam/headers.txt
+server_sam/.env
+server_sam/.sam_port

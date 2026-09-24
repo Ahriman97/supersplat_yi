@@ -1,5 +1,14 @@
 // src/sam-client.ts
-const SAM_SERVER_URL = 'http://localhost:8000';
+// const SAM_SERVER_URL = 'http://localhost:8000';
+// Порт SAM-сервера читается из URL (передаёт лаунчер через ?samPort=)
+// По умолчанию — 8000.
+const getSamServerUrl = (): string => {
+    const params = new URLSearchParams(window.location.search);
+    const port = params.get('samPort') ?? '8000';
+    return `http://localhost:${port}`;
+};
+
+const SAM_SERVER_URL = getSamServerUrl();
 
 /**
  * Отправляет PNG-скриншот + точку клика на SAM-сервер.
