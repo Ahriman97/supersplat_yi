@@ -2,7 +2,7 @@ import { MemoryFileSystem } from '@playcanvas/splat-transform';
 import { Color, Mat4, path, Quat, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
-import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
+import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, DetectShadowsOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
@@ -658,6 +658,19 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (!splat || splat.numSelected === 0) return;
         const isolated = findIsolatedSelectedSplats(splat.splatData);
         events.fire('edit.add', new SelectOp(splat, 'intersect', isolated));
+    });
+
+    events.on('select.detectShadows', (threshold = 0.7) => {
+        selectedSplats().forEach((splat) => {
+            editHistory.add(new DetectShadowsOp(splat, threshold));
+        });
+        // Показать уведомление
+        events.fire('showPopup', {
+            type: 'info',
+            header: 'Поиск теней',
+            //message: `Найдено и скрыто теней: ${lastCount}`
+            message: `Смотри в консоли число выделений`
+        });
     });
 
     let transparentLocked = false;

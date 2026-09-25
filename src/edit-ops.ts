@@ -117,7 +117,7 @@ class SelectOp extends StateOp {
     //   intersect — keep only splats currently selected AND in the hit mask
     //               (clear the selected bit on selected splats that are not hit).
     constructor(splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect' | 'refine', sel: Uint8Array | Uint32Array) {
-        console.log('[SelectOp] op =', op);
+        // console.log('[SelectOp] op =', op);
         const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
         const isHit = sel instanceof Uint32Array ? sortedPredicate(sel) : (i: number) => sel[i] === 255;
@@ -156,11 +156,150 @@ class SelectOp extends StateOp {
                 }
             }
             splat.lastAddedMask = mask;
-            console.log('[SelectOp] lastAddedMask set, count =', count);
+            // console.log('[SelectOp] lastAddedMask set, count =', count);
         }
-        if (op === 'refine') {
-            console.log('[SelectOp] refine, lastAddedMask =', splat.lastAddedMask);
+        // if (op === 'refine') {
+            // console.log('[SelectOp] refine, lastAddedMask =', splat.lastAddedMask);
+        // }
+    }
+}
+
+class DetectShadowsOp extends StateOp {
+    name = 'detectShadows';
+
+    constructor(splat: Splat, threshold: number) {
+        const splatData = splat.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        const numSplats = splatData.numSplats;
+
+        const reds = splatData.getProp('f_dc_0') as Float32Array;
+        const greens = splatData.getProp('f_dc_1') as Float32Array;
+        const blues = splatData.getProp('f_dc_2') as Float32Array;
+
+        // --- Проверка наличия данных ---
+        console.log('[DetectShadows] === Start ===');
+        console.log('[DetectShadows] numSplats =', numSplats);
+        console.log('[DetectShadows] has color channels:', {
+            reds: !!reds,
+            greens: !!greens,
+            blues: !!blues
+        });
+
+        if (!reds || !greens || !blues) {
+            console.error('[DetectShadows] COLOR CHANNELS MISSING!');
+            super(splat, IndexRanges.fromPredicate(0, () => false), State.locked, BitOp.SET, State.locked);
+            return;
         }
+
+        const SH_C0 = 0.28209479177387814;
+        const decode = (v: number) => Math.min(1, Math.max(0, 0.5 + v * SH_C0));
+        const lum = (r: number, g: number, b: number) => 0.299 * r + 0.587 * g + 0.114 * b;
+
+        // средняя яркость выделения
+        let sum = 0;
+        let cnt = 0;
+        // for (let i = 0; i < numSplats; i++) {
+        //     if (state[i] === State.selected) {
+        //         sum += lum(decode(reds[i]), decode(greens[i]), decode(blues[i]));
+        //         cnt++;
+        //     }
+        // }
+        let minLum = Infinity;
+        let maxLum = -Infinity;
+
+        for (let i = 0; i < numSplats; i++) {
+            if (state[i] === State.selected) {
+                const l = lum(decode(reds[i]), decode(greens[i]), decode(blues[i]));
+                sum += l;
+                cnt++;
+                if (l < minLum) minLum = l;
+                if (l > maxLum) maxLum = l;
+            }
+        }
+        const avg = cnt > 0 ? sum / cnt : 0;
+        const shadowThreshold = avg * threshold;
+
+        //==== считаем найденные тени
+        console.log('[DetectShadows] selected count =', cnt);
+        console.log('[DetectShadows] luminance range = [', 
+            cnt > 0 ? minLum.toFixed(4) : 'N/A', 
+            '..', 
+            cnt > 0 ? maxLum.toFixed(4) : 'N/A', 
+            ']');
+        console.log('[DetectShadows] avg luminance =', avg.toFixed(4));
+        console.log('[DetectShadows] threshold =', threshold, '→ shadowThreshold =', shadowThreshold.toFixed(4));
+        console.log('[DetectShadows] selected count =', cnt);
+
+        // --- Шаг 2: Гистограмма (10 бакетов) ---
+        const BUCKETS = 10;
+        const histogram = new Array(BUCKETS).fill(0);
+        const bucketSize = (maxLum - minLum) / BUCKETS || 1;
+
+        for (let i = 0; i < numSplats; i++) {
+            if (state[i] === State.selected) {
+                const l = lum(decode(reds[i]), decode(greens[i]), decode(blues[i]));
+                const bucket = Math.min(BUCKETS - 1, Math.floor((l - minLum) / bucketSize));
+                histogram[bucket]++;
+            }
+        }
+
+        console.log('[DetectShadows] histogram (luminance distribution):');
+        for (let b = 0; b < BUCKETS; b++) {
+            const from = (minLum + b * bucketSize).toFixed(3);
+            const to = (minLum + (b + 1) * bucketSize).toFixed(3);
+            const pct = cnt > 0 ? (histogram[b] / cnt * 100).toFixed(1) : '0.0';
+            const bar = '█'.repeat(Math.round(histogram[b] / cnt * 50));
+            console.log(`  [${from}..${to}] ${histogram[b]} (${pct}%) ${bar}`);
+        }
+
+        // --- Шаг 3: Подсчёт теней ---
+        let shadowCount = 0;
+        const shadowMask = new Uint8Array(numSplats);
+
+        for (let i = 0; i < numSplats; i++) {
+            if (state[i] === State.selected) {
+                const l = lum(decode(reds[i]), decode(greens[i]), decode(blues[i]));
+                if (l < shadowThreshold) {
+                    shadowCount++;
+                    shadowMask[i] = 255;
+                }
+            }
+        }
+
+        const shadowPct = cnt > 0 ? (shadowCount / cnt * 100).toFixed(1) : '0.0';
+        console.log('[DetectShadows] found shadows =', shadowCount, `(${shadowPct}% of selection)`);
+
+        if (shadowCount === 0) {
+            console.warn('[DetectShadows] NO SHADOWS FOUND. Try higher threshold (0.8-1.0).');
+        } else if (parseFloat(shadowPct) > 50) {
+            console.warn('[DetectShadows] TOO MANY SHADOWS (>50%). Try lower threshold (0.4-0.6).');
+        }
+        //====
+
+        // находим тёмные — устанавливаем им selected
+        // (они уже selected, поэтому ставим locked? Нет — лучше новый флаг)
+        // Для простоты используем locked как "тень"
+        super(
+            splat,
+            IndexRanges.fromPredicate(numSplats, (i) => {
+                if (state[i] !== State.selected) return false;
+                const l = lum(decode(reds[i]), decode(greens[i]), decode(blues[i]));
+                return l < shadowThreshold;
+            }),
+            State.locked,   // помечаем как "тень" через locked
+            BitOp.SET,
+            State.locked
+        );
+        console.log('[DetectShadows] op created');
+        console.log('[DetectShadows] ranges data length =', this.ranges.data.length);
+        console.log('[DetectShadows] op created, ranges data length =', this.ranges.data.length);
+        console.log('[DetectShadows] === End ===');
+    }
+
+    async do() {
+        await super.do();
+        console.log('[DetectShadows] after apply: numLocked =', this.splat.numLocked);
+        console.log('[DetectShadows] after apply: numSelected =', this.splat.numSelected);
     }
 }
 
@@ -554,6 +693,7 @@ export {
     SelectNoneOp,
     SelectInvertOp,
     SelectOp,
+    DetectShadowsOp,
     HideSelectionOp,
     UnhideAllOp,
     DeleteSelectionOp,

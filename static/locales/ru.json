@@ -352,6 +352,7 @@
     "tooltip.sam.op-add": "Добавить к выделению",
     "tooltip.sam.op-remove": "Убрать из выделения",
     "tooltip.sam.op-refine": "Уточнить (сохранить только пересечение)",
+    "tooltip.sam.op-shadows-short": "Найти тени",
 
     "tooltip.scene.solo": "Соло выбранного",
     "tooltip.scene.import": "Импортировать сцену",

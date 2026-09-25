@@ -53,4 +53,4 @@ if (failed) {
     process.exit(1);
 }
 
-console.log(`✔ All ${localeFiles.length} locales are in sync with ${referenceFile} (${referenceKeys.length} keys).`);
+// console.log(`✔ All ${localeFiles.length} locales are in sync with ${referenceFile} (${referenceKeys.length} keys).`);

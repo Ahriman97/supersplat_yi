@@ -4,6 +4,7 @@ import { opFromModifiers } from '../select-op';
 import { segmentImage } from '../sam-client';
 import { i18n } from '../ui/localization';
 
+// type SamOp = 'set' | 'add' | 'remove' | 'intersect' | 'refine' | 'shadows';
 type SamOp = 'set' | 'add' | 'remove' | 'intersect' | 'refine';
 
 class SamSelection {
@@ -50,11 +51,22 @@ class SamSelection {
     const btnAdd = makeOpButton('tooltip.sam.op-add-short', 'add');
     const btnRemove = makeOpButton('tooltip.sam.op-remove-short', 'remove');
     const btnRefine = makeOpButton('tooltip.sam.op-refine-short', 'refine');
+    //const btnShadows = makeOpButton('tooltip.sam.op-shadows-short', 'shadows');
+    // Кнопка-действие "Найти тени" — вызывается сразу, не ждёт клика
+    const btnShadows = new Button({ class: 'sam-op-button' });
+    i18n.bindText(btnShadows, 'tooltip.sam.op-shadows-short');
+    btnShadows.dom.addEventListener('click', () => { 
+            btnShadows.class.add('active');
+            setTimeout(() => btnShadows.class.remove('active'), 200);
+            events.fire('select.detectShadows', 0.7); 
+        }
+    );
 
     opPanel.append(btnSet);
     opPanel.append(btnAdd);
     opPanel.append(btnRemove);
     opPanel.append(btnRefine);
+    opPanel.append(btnShadows);
 
     //document.body.appendChild(opPanel.dom);
     canvasContainer.append(opPanel);
@@ -69,6 +81,7 @@ class SamSelection {
         setActive(btnAdd, currentOp === 'add');
         setActive(btnRemove, currentOp === 'remove');
         setActive(btnRefine, currentOp === 'refine');
+        //setActive(btnShadows, currentOp === 'shadows');
     };
     updateActiveOp();
 
@@ -76,6 +89,13 @@ class SamSelection {
         const pointerdown = async (e: PointerEvent) => {
             if (e.pointerType === 'mouse' ? e.button !== 0 : !e.isPrimary) return;
             if (busy) return;
+            // if (currentOp === 'shadows') {
+            //     // Не отправляем в SAM — работаем с уже выделенным
+            //     events.fire('select.detectShadows', 0.7);
+            //     busy = false;
+            //     events.fire('stopSpinner');
+            //     return;
+            // }
 
             e.preventDefault();
             e.stopPropagation();

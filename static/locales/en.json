@@ -352,6 +352,7 @@
     "tooltip.sam.op-add": "Add — extend selection",
     "tooltip.sam.op-remove": "Remove — subtract from selection",
     "tooltip.sam.op-refine": "Refine — keep intersection only",
+    "tooltip.sam.op-shadows-short": "Find Shadows",
 
     "tooltip.scene.solo": "Solo Selected",
     "tooltip.scene.import": "Import Scene",
