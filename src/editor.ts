@@ -11,6 +11,7 @@ import { findIsolatedSelectedSplats } from './isolated-splats';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { writeSplatFile } from './splat-serialize';
+import { cloneGaussians } from './clone-stamp';
 
 const removeExtension = (filename: string) => {
     return filename.substring(0, filename.length - path.getExtension(filename).length);
@@ -671,6 +672,45 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             //message: `Найдено и скрыто теней: ${lastCount}`
             message: `Смотри в консоли число выделений`
         });
+    });
+
+    events.on('clone.test', () => {
+        const splat = selectedSplats()[0];
+        if (!splat) {
+            console.warn('[Clone Test] Нет выбранного splat');
+            return;
+        }
+
+        const numSplats = splat.splatData.numSplats;
+        console.log(`[Clone Test] numSplats = ${numSplats}`);
+
+        const donorMask = new Uint8Array(numSplats);
+        const holeMask = new Uint8Array(numSplats);
+
+        // Захардкодить: первые 1000 гауссианов = донор, следующие 1000 = дыра
+        // (можно поменять на другой диапазон)
+        const donorStart = 0;
+        const donorEnd = Math.min(1000, numSplats);
+        const holeStart = donorEnd;
+        const holeEnd = Math.min(donorEnd + 1000, numSplats);
+
+        for (let i = donorStart; i < donorEnd; i++) donorMask[i] = 255;
+        for (let i = holeStart; i < holeEnd; i++) holeMask[i] = 255;
+
+        console.log(`[Clone Test] donor: ${donorStart}..${donorEnd}, hole: ${holeStart}..${holeEnd}`);
+
+        try {
+            const { gsplatData, numDonor, numRest, shBands } = cloneGaussians(splat, donorMask, holeMask);
+            console.log(`[Clone Test] создано ${numDonor} гауссианов, SH_BANDS=${shBands}, numRest=${numRest}`);
+
+            const asset = scene.assetLoader.createGSplatAsset(gsplatData, 'clone-test.ply');
+            const cloneSplat = new Splat(asset, splat.entity.getLocalRotation().clone());
+
+            editHistory.add(new AddSplatOp(scene, cloneSplat));
+            console.log('[Clone Test] splat добавлен в сцену');
+        } catch (err) {
+            console.error('[Clone Test] ошибка:', err);
+        }
     });
 
     let transparentLocked = false;
