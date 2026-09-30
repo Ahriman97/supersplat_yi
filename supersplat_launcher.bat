@@ -17,7 +17,11 @@ REM  старый процесс launcher продолжает работать,
 REM  не содержит логики, которая может устареть.
 REM ============================================================
 
+REM --- Выбор PROJECT_DIR: сначала work\supersplat_yi, иначе supersplat_yi ---
 set "PROJECT_DIR=%USERPROFILE%\Documents\work\supersplat_yi"
+if not exist "%PROJECT_DIR%" (
+    set "PROJECT_DIR=%USERPROFILE%\Documents\supersplat_yi"
+)
 
 REM --- Проверка папок и файлов ---
 if not exist "%PROJECT_DIR%" (
