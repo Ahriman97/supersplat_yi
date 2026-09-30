@@ -315,6 +315,8 @@
 
     "tooltip.bottom-toolbar.undo": "Отменить",
     "tooltip.bottom-toolbar.redo": "Повторить",
+    "tooltip.bottom-toolbar.use-depth": "Глубина выделения",
+    "tooltip.bottom-toolbar.use-footprint": "Отпечаток выделения",
     "tooltip.bottom-toolbar.rectangle-selection": "Прямоугольное выделение",
     "tooltip.bottom-toolbar.lasso-selection": "Выделение лассо",
     "tooltip.bottom-toolbar.polygon-selection": "Выделение полигоном",

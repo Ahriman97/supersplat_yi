@@ -1,12 +1,12 @@
 import { WebPCodec, WorkerQueue } from '@playcanvas/splat-transform';
 import { Color, createGraphicsDevice } from 'playcanvas';
-
+import { SelectionDepthTool } from './tools/selection-depth-tool';
 import { registerAutosaveJournal } from './autosave-journal';
 import { registerCameraPosesEvents } from './camera-poses';
 import { CommandQueue } from './command-queue';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
-import { registerEditorEvents } from './editor';
+import { registerEditorEvents, registerEditorFunctions } from './editor';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
 import { registerIframeApi } from './iframe-api';
@@ -117,6 +117,7 @@ const main = async () => {
     registerTransformHandlerEvents(events);
     registerPublishEvents(events);
     registerIframeApi(events);
+    registerEditorFunctions(events);
 
     // initialize shortcuts
     const shortcutManager = new ShortcutManager(events);
@@ -228,6 +229,8 @@ const main = async () => {
     setUnselectedClr(toColor(sceneConfig.unselectedClr));
     setLockedClr(toColor(sceneConfig.lockedClr));
 
+    const selectionDepthTool = new SelectionDepthTool(events, editorUI.canvasContainer);
+
     // create the mask selection canvas
     const maskCanvas = document.createElement('canvas');
     const maskContext = maskCanvas.getContext('2d');
@@ -243,7 +246,7 @@ const main = async () => {
     const toolManager = new ToolManager(events);
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom, mask));
-    // toolManager.register('samSelection', new SamSelection(events, editorUI.toolsContainer.dom, mask));
+    //toolManager.register('selectionDepth', new SelectionDepthTool(events, editorUI.canvasContainer));
     toolManager.register('samSelection', new SamSelection(events, editorUI.toolsContainer.dom, mask, editorUI.canvasContainer));
     toolManager.register('floodSelection', new FloodSelection(events, editorUI.toolsContainer.dom, mask, editorUI.canvasContainer));
     toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom, mask));
@@ -257,7 +260,7 @@ const main = async () => {
     toolManager.register('measure', new MeasureTool(events, scene, editorUI.canvasContainer));
     toolManager.register('orient', new OrientTool(events, scene, editorUI.toolsContainer.dom, editorUI.canvasContainer));
 
-    const boundDimensionsOverlay = new BoundDimensionsOverlay(events, scene, editorUI.canvasContainer);
+    // const boundDimensionsOverlay = new BoundDimensionsOverlay(events, scene, editorUI.canvasContainer);
 
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 

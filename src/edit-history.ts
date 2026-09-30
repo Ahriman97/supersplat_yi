@@ -29,7 +29,10 @@ class EditHistory {
 
         events.on('edit.undo', () => this.undo());
         events.on('edit.redo', () => this.redo());
-        events.on('edit.add', (editOp: EditOp, suppressOp = false) => this.add(editOp, suppressOp));
+        //events.on('edit.add', (editOp: EditOp, suppressOp = false) => this.add(editOp, suppressOp));
+        events.on('edit.add', (editOp: EditOp, suppressOp = false) => {
+            this.add(editOp, suppressOp);
+        });
         events.on('edit.removeForShape', (shape: unknown) => this.removeForShape(shape));
     }
 

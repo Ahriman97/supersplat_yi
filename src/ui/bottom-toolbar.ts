@@ -1,4 +1,4 @@
-import { Button, Element, Container } from '@playcanvas/pcui';
+import { Button, Element, Container, NumericInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
@@ -16,9 +16,14 @@ import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
 import boxSvg from './svg/show-hide-splats.svg';
 import undoSvg from './svg/undo.svg';
+import depthOnSvg from './svg/selection-depth-on.svg';
+import depthOffSvg from './svg/selection-depth-off.svg';
+import footprintCentersSvg from './svg/selection-footprint-centers.svg';
+import footprintRingsSvg from './svg/selection-footprint-rings.svg';
 import { Tooltips } from './tooltips';
-// import cropSvg from './svg/crop.svg';
 import samSvg from './svg/select-sam.svg';
+
+
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -49,6 +54,45 @@ class BottomToolbar extends Container {
             class: 'bottom-toolbar-button',
             enabled: false
         });
+
+        // depth toggle: on = only the visible surface picks, off = through all layers
+        const selectionMode = new Button({
+            id: 'bottom-toolbar-selection-mode',
+            class: 'bottom-toolbar-selection-mode-button'
+        });
+
+        // cut depth input, floats above the depth button
+        const cutDepthInput = new NumericInput({
+            class: 'bottom-toolbar-cut-depth',
+            value: 0,
+            precision: 1,
+            min: 0,
+            step: 250,
+            placeholder: '0'
+        });
+
+        // hidden by default; shown when the depth toggle is active
+        cutDepthInput.hidden = true;
+
+        const depthOnIcon = createSvg(depthOnSvg);
+        const depthOffIcon = createSvg(depthOffSvg);
+        depthOnIcon.classList.add('bottom-toolbar-selection-mode-icon');
+        depthOffIcon.classList.add('bottom-toolbar-selection-mode-icon');
+        selectionMode.dom.appendChild(depthOnIcon);
+        selectionMode.dom.appendChild(depthOffIcon);
+
+        // footprint toggle: centers (footprint 0) or the full splat footprint
+        const footprintMode = new Button({
+            id: 'bottom-toolbar-selection-footprint',
+            class: 'bottom-toolbar-selection-mode-button'
+        });
+
+        const footprintCentersIcon = createSvg(footprintCentersSvg);
+        const footprintRingsIcon = createSvg(footprintRingsSvg);
+        footprintCentersIcon.classList.add('bottom-toolbar-selection-mode-icon');
+        footprintRingsIcon.classList.add('bottom-toolbar-selection-mode-icon');
+        footprintMode.dom.appendChild(footprintCentersIcon);
+        footprintMode.dom.appendChild(footprintRingsIcon);
 
         const picker = new Button({
             id: 'bottom-toolbar-picker',
@@ -101,11 +145,6 @@ class BottomToolbar extends Container {
             enabled: false
         });
 
-        // const crop = new Button({
-        //     id: 'bottom-toolbar-crop',
-        //     class: ['bottom-toolbar-tool', 'disabled']
-        // });
-
         const move = new Button({
             id: 'bottom-toolbar-move',
             class: 'bottom-toolbar-tool',
@@ -148,6 +187,8 @@ class BottomToolbar extends Container {
 
         undo.dom.appendChild(createSvg(undoSvg));
         redo.dom.appendChild(createSvg(redoSvg));
+
+
         picker.dom.appendChild(createSvg(pickerSvg));
         polygon.dom.appendChild(createSvg(polygonSvg));
         brush.dom.appendChild(createSvg(brushSvg));
@@ -159,11 +200,13 @@ class BottomToolbar extends Container {
         isolated.dom.appendChild(createSvg(isolatedSvg));
         measure.dom.appendChild(createSvg(measureSvg));
         orient.dom.appendChild(createSvg(orientSvg));
-        // crop.dom.appendChild(createSvg(cropSvg));
         sam.dom.appendChild(createSvg(samSvg));
 
         this.append(undo);
         this.append(redo);
+        this.append(new Element({ class: 'bottom-toolbar-separator' }));
+        this.append(selectionMode);
+        this.append(footprintMode);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(picker);
         this.append(lasso);
@@ -176,7 +219,6 @@ class BottomToolbar extends Container {
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(sphere);
         this.append(box);
-        // this.append(crop);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(move);
         this.append(rotate);
@@ -189,6 +231,8 @@ class BottomToolbar extends Container {
 
         undo.dom.addEventListener('click', () => events.fire('edit.undo'));
         redo.dom.addEventListener('click', () => events.fire('edit.redo'));
+        selectionMode.dom.addEventListener('click', () => events.fire('tool.selectionDepth'));
+        footprintMode.dom.addEventListener('click', () => events.fire('selection.toggleFootprint'));;
         polygon.dom.addEventListener('click', () => events.fire('tool.polygonSelection'));
         lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
@@ -211,6 +255,15 @@ class BottomToolbar extends Container {
             } else {
                 events.fire('pivot.reset', e.shiftKey);
             }
+        });
+        selectionMode.dom.addEventListener('click', (e: MouseEvent) => {
+            if (e.button === 2) {
+                e.preventDefault();
+                e.stopPropagation();
+                events.fire('selection.cutDepthPopup.toggle', selectionMode.dom);
+                return;
+            }
+            events.fire('selection.toggleUseDepth');
         });
 
         events.on('edit.canUndo', (value: boolean) => {
@@ -248,6 +301,17 @@ class BottomToolbar extends Container {
             coordSpace.dom.classList[space === 'local' ? 'add' : 'remove']('active');
         });
 
+        events.on('selection.useDepth', (value: boolean) => {
+            selectionMode.class[value ? 'add' : 'remove']('active');
+        });
+
+        events.on('selection.footprint', (value: number) => {
+            footprintMode.class[value > 0 ? 'add' : 'remove']('active');
+        });
+
+        selectionMode.class[events.invoke('selection.useDepth') ? 'add' : 'remove']('active');
+        footprintMode.class[(events.invoke('selection.footprint') as number) > 0 ? 'add' : 'remove']('active');
+
 
         // Helper to compose localized tooltip text with shortcut
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
@@ -278,6 +342,8 @@ class BottomToolbar extends Container {
         tooltips.register(scale, tooltip('tooltip.bottom-toolbar.scale', 'tool.scaleShortcut'));
         tooltips.register(measure, tooltip('tooltip.bottom-toolbar.measure'));
         tooltips.register(orient, tooltip('tooltip.bottom-toolbar.orient'));
+        tooltips.register(selectionMode, tooltip('tooltip.bottom-toolbar.use-depth', 'selection.toggleUseDepth'));
+        tooltips.register(footprintMode, tooltip('tooltip.bottom-toolbar.use-footprint', 'selection.toggleFootprint'));
         tooltips.register(coordSpace, tooltip('tooltip.bottom-toolbar.local-space', 'tool.toggleCoordSpace'));
         tooltips.register(origin, () => i18n.t(
             events.invoke('tool.active') === 'orient' ? 'orient.set-pivot' : 'tooltip.bottom-toolbar.reset-pivot'

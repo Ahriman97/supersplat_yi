@@ -41,6 +41,47 @@
     background-color: $bcg-primary;
 }
 
+.bottom-toolbar-selection-mode-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    margin: 0px 1px;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
+    background-color: $bcg-primary;
+
+    svg {
+        width: 20px;
+        height: 20px;
+        color: $clr-default;
+    }
+    
+    .bottom-toolbar-selection-mode-icon {
+        display: none;   // по умолчанию обе скрыты
+    }
+
+    // первая иконка — состояние OFF
+    .bottom-toolbar-selection-mode-icon:first-child {
+        display: block;
+    }
+
+    // при active — вторая иконка (ON), первая скрыта
+    &.active .bottom-toolbar-selection-mode-icon:first-child {
+        display: none;
+    }
+    &.active .bottom-toolbar-selection-mode-icon:last-child {
+        display: block;
+    }
+
+    // подсветка активного состояния (как у .bottom-toolbar-toggle.active)
+    &.active svg {
+        color: $clr-hilight;
+    }
+}
+
 .bottom-toolbar-button {
     svg {
         color: $clr-default;

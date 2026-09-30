@@ -36,6 +36,10 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'select.none': { keys: ['a'], ctrl: 'required', shift: 'required', capture: true },
     'select.invert': { keys: ['i'], ctrl: 'required' },
     'select.delete': { keys: ['Delete', 'Backspace'] },
+    'selection.toggleUseDepth': { keys: ['n'] },
+    'selection.toggleFootprint': { keys: ['j'] },
+    'selection.cutDepthSmaller': { keys: ['['], shift: 'required', repeat: true },
+    'selection.cutDepthBigger': { keys: [']'], shift: 'required', repeat: true },
 
     // Tools
     // 1/2/3 don't fire tool.move/rotate/scale directly: while a shape
