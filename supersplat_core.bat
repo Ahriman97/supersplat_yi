@@ -124,23 +124,42 @@ REM ============================================================
 REM  [4/6] Ожидание готовности SAM
 REM ============================================================
 echo.
+echo [4/6] Определяем реальный порт SAM-контейнера...
+
+REM Пытаемся получить реальный порт из docker compose (может отличаться от 8000, если 8000 занят)
+set "DETECTED_PORT="
+for /f "tokens=2 delims=:" %%P in ('docker compose port sam-server 8000 2^>nul') do set "DETECTED_PORT=%%P"
+
+if defined DETECTED_PORT (
+    set "SAM_PORT=!DETECTED_PORT!"
+    set "SAM_URL=http://localhost:!SAM_PORT!"
+    echo       Docker назначил порт: !SAM_PORT!
+    REM Сохраняем, чтобы в следующий раз использовать его
+    >"%SERVER_DIR%\.sam_port" echo !SAM_PORT!
+) else (
+    echo       Не удалось определить порт через docker compose port, используем !SAM_PORT!
+)
+
+echo.
 echo [4/6] Ждём загрузки модели SAM (до 60 секунд)...
 set /a WAIT_COUNT=0
 :wait_loop
 set /a WAIT_COUNT+=1
 
+REM Убираем лишний % — в bat-файле нужно %% только внутри for, здесь достаточно одинарного %
 curl -s -o nul -w "%%{http_code}" "%SAM_URL%/health" > "%TEMP%\sam_health.txt" 2>nul
 set /p HEALTH_CODE=<"%TEMP%\sam_health.txt"
 del "%TEMP%\sam_health.txt" >nul 2>&1
 
-if "%HEALTH_CODE%"=="200" (
-    echo       SAM-сервер готов (после %WAIT_COUNT% попыток^).
+if "!HEALTH_CODE!"=="200" (
+    echo       SAM-сервер готов на порту !SAM_PORT! (после %WAIT_COUNT% попыток^).
     goto sam_ready
 )
 
 if %WAIT_COUNT% GEQ 30 (
     echo.
-    echo [ОШИБКА] SAM-сервер не отвечает после 60 секунд.
+    echo [ОШИБКА] SAM-сервер не отвечает после 60 секунд на %SAM_URL%.
+    echo         Проверьте порт: docker compose port sam-server 8000
     echo         Логи: docker compose logs sam-server
     pause
     exit /b 1
