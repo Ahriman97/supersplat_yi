@@ -340,7 +340,7 @@
     "tooltip.timeline.add-key": "Add Key",
     "tooltip.timeline.remove-key": "Remove Key",
     "tooltip.timeline.key": "Drag to move. Shift+drag to copy. Ctrl+click to set to current view.",
-    "tooltip.timeline.key-out-of-range": "Keyframe {{frame}} is past the end of the timeline and won"t play. Drag it onto the timeline or increase Total Frames.",
+    "tooltip.timeline.key-out-of-range": "Keyframe {{frame}} is past the end of the timeline and won't play. Drag it onto the timeline or increase Total Frames.",
     "tooltip.timeline.frame-rate": "Frame Rate",
     "tooltip.timeline.total-frames": "Total Frames",
     "tooltip.timeline.smoothness": "Smoothness",
@@ -363,7 +363,7 @@
     "tooltip.status-bar.timeline": "Toggle Timeline Panel",
     "tooltip.status-bar.splat-data": "Toggle Splat Data Panel",
 
-    "tooltip.splat-data.on-screen-only": "Only count splats visible in the camera"s view. Off-screen splats are excluded from the histogram.",
+    "tooltip.splat-data.on-screen-only": "Only count splats visible in the camera's view. Off-screen splats are excluded from the histogram.",
     "tooltip.splat-data.log-scale": "Use a logarithmic vertical scale so small bucket counts remain visible alongside large ones.",
     "tooltip.splat-data.show-all": "Show all per-splat properties in the list, including raw DC and spherical harmonic coefficients.",
     "popup.shortcuts.toggle-hidden-transparency": "Toggle Hidden Transparency",
