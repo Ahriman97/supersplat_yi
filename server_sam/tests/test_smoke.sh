@@ -13,7 +13,7 @@
 set -euo pipefail
 
 # --- Конфигурация ---
-HOST="${SAM_HOST:-http://localhost:8000}"
+HOST="${SAM_HOST:-http://localhost:8001}"
 TEST_IMAGE="$(dirname "$0")/test_image.jpg"
 X="${SAM_TEST_X:-0.5}"
 Y="${SAM_TEST_Y:-0.5}"

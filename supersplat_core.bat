@@ -203,6 +203,9 @@ echo       Используем Git Bash: !BASH_EXE!
 echo       Unix-утилиты: !GIT_USR_BIN!
 
 cd /d "%SERVER_DIR%"
+REM "!BASH_EXE!" tests/test_smoke.sh
+echo       Передаём тесту SAM_HOST=!SAM_URL!
+set "SAM_HOST=!SAM_URL!"
 "!BASH_EXE!" tests/test_smoke.sh
 if errorlevel 1 (
     echo.
