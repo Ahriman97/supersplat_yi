@@ -1,91 +1,199 @@
-# SuperSplat Editor
+# SuperSplat Yi
 
-[![Github Release](https://img.shields.io/github/v/release/playcanvas/supersplat)](https://github.com/playcanvas/supersplat/releases)
-[![License](https://img.shields.io/github/license/playcanvas/supersplat)](https://github.com/playcanvas/supersplat/blob/main/LICENSE)
-[![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white&color=black)](https://discord.gg/RSaMRzg)
-[![Reddit](https://img.shields.io/badge/Reddit-FF4500?style=flat&logo=reddit&logoColor=white&color=black)](https://www.reddit.com/r/PlayCanvas)
-[![X](https://img.shields.io/badge/X-000000?style=flat&logo=x&logoColor=white&color=black)](https://x.com/intent/follow?screen_name=playcanvas)
+Форк [SuperSplat Editor](https://github.com/playcanvas/supersplat) v2.32.3
+с расширенным выделением по глубине, preview-логикой, автоматизацией
+локального запуска и интеграцией локального SAM-сервера.
 
-| [SuperSplat Editor](https://superspl.at/editor) | [User Guide](https://developer.playcanvas.com/user-manual/gaussian-splatting/editing/supersplat/) | [Blog](https://blog.playcanvas.com) | [Forum](https://forum.playcanvas.com) |
+## Что добавлено к оригиналу
 
-The SuperSplat Editor is a free and open source tool for inspecting, editing, optimizing and publishing 3D Gaussian Splats. It is built on web technologies and runs in the browser, so there's nothing to download or install.
+### Управление глубиной выбора
 
-A live version of this tool is available at: https://superspl.at/editor
+- **Selection Depth (N)** — переключение между управляемой и
+  неуправляемой глубиной выбора.
+- **Selection Footprint (J)** — переключение метода выбора гауссов:
+  по центрам или по кругам (эллипсам на экране).
+- **Cut Depth** — максимальная глубина выбора в юнитах сцены:
+  - `0` — выбор насквозь (без ограничения).
+  - `> 0` — выбор только в пределах N юнитов от ближайшего
+    выделенного гаусса.
+- **Ctrl+wheel** — изменение Cut Depth на 1 юнит в большую и
+  меньшую стороны.
 
-![image](https://github.com/user-attachments/assets/b6cbb5cc-d3cc-4385-8c71-ab2807fd4fba)
+### Preview и фиксация
 
-To learn more about using SuperSplat, please refer to the [User Guide](https://developer.playcanvas.com/user-manual/gaussian-splatting/editing/supersplat/).
+- **Preview** — live-обновление выделения при изменении Cut Depth
+  (debounce 80 мс).
+- **Apply (кнопка)** — фиксация preview в истории (можно откатить
+  через `Ctrl+Z`).
+- **Enter** — то же, что Apply, но горячей клавишей.
+- **Ctrl+Z** — отмена preview (если активен) или последнего op из
+  истории.
+- **Ctrl+Shift+Z** — возврат отменённого.
 
-## Local Development
+### Раскладка
 
-To initialize a local development environment for SuperSplat, ensure you have [Node.js](https://nodejs.org/) 18 or later installed. Follow these steps:
+Все горячие клавиши привязаны к физическим клавишам (`e.code`),
+поэтому работают в любой раскладке (русская, английская и т.д.).
 
-1. Clone the repository:
+### SAM (Segment Anything Model)
 
-   ```sh
-   git clone https://github.com/Ahriman97/supersplat_yi.git
-   cd supersplat_yi
-   ```
+Локальный SAM-сервер для сегментации объектов по клику. Разворачивается
+в Docker-контейнере вместе с редактором. Это **наше новшество** —
+в оригинальном SuperSplat такого нет.
 
-2. Install dependencies:
+## Установка
 
-   ```sh
-   npm install
-   ```
+### Требования
 
-3. Build SuperSplat and start a local web server:
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+  (с поддержкой GPU, если хотите ускорение через CUDA)
+- [Git for Windows](https://git-scm.com/download/win) (с Git Bash)
+- [Node.js](https://nodejs.org/) 18+
+- Microsoft Edge
+- NVIDIA GPU (опционально, но рекомендуется для SAM)
 
-   ```sh
-   npm run develop
-   ```
+### Вариант 1 — быстрый запуск через .bat-лаунчер (Windows)
 
-4. Open a web browser tab and make sure network caching is disabled on the network tab and the other application caches are clear:
+1. Скопируйте проект в одну из папок:
+   - `%USERPROFILE%\Documents\work\supersplat_yi` (приоритет)
+   - `%USERPROFILE%\Documents\supersplat_yi` (fallback)
 
-   - On Safari you can use `Cmd+Option+e` or Develop->Empty Caches.
-   - On Chrome ensure the options "Update on reload" and "Bypass for network" are enabled in the Application->Service workers tab:
+2. Запустите `supersplat_launcher.bat` (двойной клик).
 
-   <img width="846" alt="Screenshot 2025-04-25 at 16 53 37" src="https://github.com/user-attachments/assets/888bac6c-25c1-4813-b5b6-4beecf437ac9" />
+3. Лаунчер спросит, обновлять ли проект из git:
+   - **Y** — `git pull` + пересборка Docker-образа SAM (если файлы
+     сервера изменились по хешу).
+   - **N** — запуск со старой версией.
 
-5. Navigate to `http://localhost:3000`
+4. Что произойдёт автоматически:
+   - Поиск свободного порта для SAM-сервера (диапазон:
+     8000, 8001, 8002, 8003, 8010, 8080, 8090, 9000).
+   - Запуск Docker-контейнера `sam-server`.
+   - Ожидание готовности `/health` (до 60 секунд).
+   - **Smoke-тест SAM-сервера**.
+   - Запуск dev-сервера SuperSplat (`npm run develop`).
+   - Открытие Microsoft Edge с изолированным профилем.
 
-When changes to the source are detected, SuperSplat is rebuilt automatically. Simply refresh your browser to see your changes.
+5. Если smoke-тест не пройдёт — лаунчер сообщит об ошибке и не
+   запустит редактор.
 
-## Localizing the SuperSplat Editor
+### Вариант 2 — ручная установка (Node.js, без SAM)
 
-The currently supported languages are available here:
+Требуется Node.js 18+.
 
-https://github.com/playcanvas/supersplat/tree/main/static/locales
+```sh
+git clone https://github.com/Ahriman97/supersplat_yi.git
+cd supersplat_yi
+npm install
+npm run develop
+```
 
-### Adding a New Language
+Откройте http://localhost:3000
 
-1. Add a new `<locale>.json` file in the `static/locales` directory.
+При изменениях в исходниках проект пересобирается автоматически.
+SAM-сервер при этом **не** запускается — редактор работает без
+сегментации.
 
-2. Add the locale to the list here:
+## Архитектура
 
-   https://github.com/playcanvas/supersplat/blob/main/src/ui/localization.ts
+```
+supersplat_yi/
+├── src/                          # исходники редактора
+│   ├── editor.ts                 # логика выделения и preview
+│   ├── edit-history.ts           # история с поддержкой preview
+│   ├── tools/
+│   │   └── selection-depth-tool.ts  # UI панели Cut Depth
+│   └── shortcut-manager.ts       # реестр горячих клавиш
+├── server_sam/                   # SAM-сервер (FastAPI + Docker)
+│   ├── sam_server.py             # FastAPI-приложение
+│   ├── download_model.py         # загрузка чекпоинта SAM
+│   ├── Dockerfile                # NVIDIA CUDA + Python 3.11 + PyTorch
+│   ├── docker-compose.yml        # запуск контейнера
+│   ├── requirements.txt          # зависимости Python
+│   ├── models/
+│   │   └── sam_vit_b_01ec64.pth  # чекпоинт SAM ViT-B (~375 МБ)
+│   └── tests/
+│       ├── test_smoke.sh         # smoke-тест сервера
+│       └── test_image.jpg        # тестовое изображение
+├── supersplat_launcher.bat       # диспетчер (Y/N → update или core)
+├── supersplat_update.bat         # git pull + пересборка образа
+├── supersplat_core.bat           # Docker + SAM + smoke-тест + Edge
+└── README.md
+```
 
-### Testing Translations
+## SAM-сервер
 
-To test your translations:
+SAM (Segment Anything Model) — нейросеть от Meta для сегментации
+объектов по клику. В этом форке SAM разворачивается локально
+в Docker-контейнере.
 
-1. Run the development server:
+### Модель
 
-   ```sh
-   npm run develop
-   ```
+По умолчанию используется **SAM ViT-B** (`vit_b`) — самая лёгкая
+версия (~375 МБ, ~5–10 секунд загрузки в VRAM). Для более точной
+сегментации можно поменять на `vit_l` или `vit_h` в
+`docker-compose.yml` (переменная `SAM_MODEL_TYPE`), но потребуется
+больше VRAM и другой чекпоинт.
 
-2. Open your browser and navigate to:
+### API
 
-   ```
-   http://localhost:3000/?lng=<locale>
-   ```
+- `GET /health` — статус сервера.
+  ```json
+  {
+    "status": "ok",
+    "model": "vit_b",
+    "device": "cuda",
+    "cuda_available": true
+  }
+  ```
 
-   Replace `<locale>` with your language code (e.g., `fr`, `de`, `es`).
+- `POST /segment` — сегментация по изображению + координатам клика.
+  - `image` (form-data): PNG-скриншот сцены.
+  - `x` (form-data): нормализованная X-координата (0..1).
+  - `y` (form-data): нормализованная Y-координата (0..1).
+  - Ответ: PNG с RGBA-маской (альфа-канал = маска).
+  - Заголовки: `X-SAM-Score` (уверенность), `X-SAM-Time` (секунды).
 
-## Contributors
+### Smoke-тест
 
-SuperSplat is made possible by our amazing open source community:
+`server_sam/tests/test_smoke.sh` — Bash-скрипт, проверяющий:
 
-<a href="https://github.com/playcanvas/supersplat/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=playcanvas/supersplat" />
-</a>
+- `/health` → 200 + `status:ok`.
+- `/segment` → 200 + непустая маска.
+- `X-SAM-Score ≥ 0.7` — уверенность.
+- `X-SAM-Time ≤ 10s` — скорость.
+
+Запускается автоматически через `supersplat_core.bat`. Если тест
+падает — редактор не запускается.
+
+## Горячие клавиши (наши дополнения)
+
+| Клавиша | Действие |
+|---|---|
+| `N` | Selection Depth вкл/выкл |
+| `J` | Selection Footprint (центры/круги) |
+| `Ctrl+wheel` | Cut Depth ±1 |
+| `Enter` | Apply (фиксация preview) |
+| `Ctrl+Z` | Отмена preview или последнего op |
+| `Ctrl+Shift+Z` | Возврат отменённого |
+
+## Известные ограничения
+
+- Cut Depth считается от 5-го перцентиля глубин выделенных гауссов
+  (отсекает floater'ы у камеры).
+- Очень большие PLY (8+ ГБ) могут упираться в лимит `ArrayBuffer`
+  браузера.
+- SAM на CPU работает медленно (~10–30 секунд на кадр); для
+  интерактивности нужна NVIDIA GPU с CUDA.
+- Docker-контейнер SAM требует NVIDIA Container Toolkit для GPU.
+
+## Лицензия
+
+MIT. См. LICENSE.
+
+## Благодарности
+
+- [PlayCanvas SuperSplat](https://github.com/playcanvas/supersplat) —
+  оригинальный редактор.
+- [Segment Anything](https://github.com/facebookresearch/segment-anything) —
+  модель SAM от Meta.
