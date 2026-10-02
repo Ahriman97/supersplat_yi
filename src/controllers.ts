@@ -244,12 +244,15 @@ class PointerController {
         // Track the physical Ctrl key so we can tell a real Ctrl+scroll
         // (orbit) from a macOS pinch (zoom). Listeners live on window so they
         // fire regardless of which element currently has focus.
-        let ctrlDown = false;
+        //let ctrlDown = false;
+        let altDown = false;
         const keydown = (event: KeyboardEvent) => {
-            if (event.key === 'Control') ctrlDown = true;
+            //if (event.key === 'Control') ctrlDown = true;
+            if (event.key === 'Alt') altDown = true;
         };
         const keyup = (event: KeyboardEvent) => {
-            if (event.key === 'Control') ctrlDown = false;
+            //if (event.key === 'Control') ctrlDown = false;
+            if (event.key === 'Alt') altDown = false;
         };
 
         const wheel = (event: WheelEvent) => {
@@ -264,8 +267,10 @@ class PointerController {
 
             // Synthetic Ctrl (macOS/Magic Mouse pinch) or Cmd: fine zoom.
             // Physical Ctrl held down: orbit.
-            const isPinch = (event.ctrlKey && !ctrlDown) || event.metaKey;
-            const isOrbit = event.ctrlKey && ctrlDown;
+            // const isPinch = event.ctrlKey || event.metaKey;
+            // const isOrbit = event.altKey && altDown;
+            const isPinch = event.ctrlKey || event.metaKey;
+            const isOrbit = event.ctrlKey && altDown;
 
             if (camera.controlMode === 'fly') {
                 if (isOrbit) {
@@ -334,7 +339,8 @@ class PointerController {
             flyUp = false;
             fastDown = false;
             slowDown = false;
-            ctrlDown = false;
+            //ctrlDown = false;
+            altDown = false;
         };
 
         // Helper to switch to fly mode when a fly key is pressed

@@ -56,6 +56,13 @@ class EditHistory {
     undo() {
         if (this.events.invoke('editing.blocked')) return Promise.resolve();
         return this.queue(async () => {
+            if (this.previewOp) {
+                await this.previewOp.undo();
+                this.previewOp.destroy?.();
+                this.previewOp = null;
+                this.events.fire('edit.cancelPreview');
+                return;
+            }
             if (this.canUndo()) {
                 await this._undo();
             }
@@ -65,6 +72,13 @@ class EditHistory {
     redo(suppressOp = false) {
         if (this.events.invoke('editing.blocked')) return Promise.resolve();
         return this.queue(async () => {
+            // cancel active preview first
+            if (this.previewOp) {
+                await this.previewOp.undo();
+                this.previewOp.destroy?.();
+                this.previewOp = null;
+                this.events.fire('edit.cancelPreview');
+            }
             if (this.canRedo()) {
                 await this._redo(suppressOp);
             }
@@ -113,6 +127,8 @@ class EditHistory {
             this.history.forEach((editOp) => {
                 editOp.destroy?.();
             });
+            this.previewOp?.destroy?.();
+            this.previewOp = null;
             this.history = [];
             this.cursor = 0;
             this.fireEvents();
@@ -170,6 +186,45 @@ class EditHistory {
             this.history = newHistory;
             this.cursor = newCursor;
             this.fireEvents();
+        });
+    }
+
+    private previewOp: EditOp | null = null;
+    
+    addPreview(makeEditOp: () => EditOp) {
+        return this.queue(async () => {
+            if (this.previewOp) {
+                await this.previewOp.undo();
+                this.previewOp.destroy?.();
+                this.previewOp = null;
+            }
+            const editOp = makeEditOp();
+            await editOp.do();
+            this.previewOp = editOp;
+        });
+    }
+
+    // фиксировать preview как настоящий op в истории
+    commitPreview() {
+        return this.queue(async () => {
+            if (!this.previewOp) return;
+            const op = this.previewOp;
+            this.previewOp = null;
+            this.history.push(op);
+            this.cursor = this.history.length;
+            this.events.fire('edit.apply', op, 'do');
+            this.fireEvents();
+        });
+    }
+
+    // откатить preview без фиксации
+    cancelPreview() {
+        return this.queue(async () => {
+            if (this.previewOp) {
+                await this.previewOp.undo();
+                this.previewOp.destroy?.();
+                this.previewOp = null;
+            }
         });
     }
 }

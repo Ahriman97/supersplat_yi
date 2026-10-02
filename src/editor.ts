@@ -2,7 +2,7 @@ import { MemoryFileSystem } from '@playcanvas/splat-transform';
 import { Color, Mat4, path, Quat, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
-import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, DetectShadowsOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
+import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, DetectShadowsOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp, SetLocalFrameOp, EditOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
@@ -272,19 +272,35 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return splat?.numSelected > 0;
     });
 
+    // remember last step for preview
+    type LastSelectOp = {
+        op: 'add'|'remove'|'set'|'intersect';
+        rect: any;
+        viewProj: Mat4;  // view × model, frozen at selection time
+        rawMask: Uint8Array | null;    // saved from dataProcessor.intersect
+        rawIds: Uint32Array<ArrayBuffer> | null;  // for rings path
+        fromRings: boolean;
+    };
+
+    let lastSelectOp: LastSelectOp | null = null;
+
     events.on('select.all', () => {
+        lastSelectOp = null;
         selectedSplats().forEach((splat) => events.fire('edit.add', new SelectAllOp(splat)));
     });
 
     events.on('select.none', () => {
+        lastSelectOp = null;
         selectedSplats().forEach((splat) => events.fire('edit.add', new SelectNoneOp(splat)));
     });
 
     events.on('select.invert', () => {
+        lastSelectOp = null;
         selectedSplats().forEach((splat) => events.fire('edit.add', new SelectInvertOp(splat)));
     });
 
     events.on('select.mask', (op: 'add'|'remove'|'set'|'intersect'|'refine', mask: Uint8Array | Uint32Array) => {
+        lastSelectOp = null;
         selectedSplats().forEach((splat) => {
             events.fire('edit.add', new SelectOp(splat, op, mask));
         });
@@ -310,20 +326,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // ============================================================
     // Cut depth
-    // ============================================================
-
-    type LastSelectOp = {
-        op: 'add'|'remove'|'set'|'intersect';
-        rect: any;
-        viewProj: Mat4;  // view × model, frozen at selection time
-        rawMask: Uint8Array | null;    // saved from dataProcessor.intersect
-        rawIds: Uint32Array<ArrayBuffer> | null;  // for rings path
-        fromRings: boolean;
-    };
-
-    let lastSelectOp: LastSelectOp | null = null;
+    events.on('edit.addPreview', (makeEditOp: () => EditOp) => {
+        editHistory.addPreview(makeEditOp);
+    });
+    events.on('edit.commitPreview', () => editHistory.commitPreview());
+    events.on('edit.cancelPreview', () => editHistory.cancelPreview());
 
     const applyCutDepthToMask = (
         splat: Splat,
@@ -350,7 +358,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         depths.sort((a, b) => a - b);
         // 5% percentile as the reference: ignores floaters near the camera
         const referenceDepth = depths[Math.floor(depths.length * REFERENCE_PERCENTILE)];
-        //const maxDepth = minDepth + cutDepth;
         const maxDepth = referenceDepth  + cutDepth;
         for (let i = 0; i < mask.length; i++) {
             if (!mask[i]) continue;
@@ -399,38 +406,56 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return new Uint32Array(filtered) as Uint32Array<ArrayBuffer>;
     };
 
-    // recompute selection with the current cutDepth using the frozen viewProj
-    events.on('selection.commit', () => {
-        
-        // if (lastSelectOp) {
-        //     events.invoke('select.rect', lastSelectOp.op, lastSelectOp.rect, lastSelectOp.viewProj);
-        // }
+    let previewTimer: number | null = null;
+
+    events.on('selection.cutDepth', () => {
         if (!lastSelectOp) return;
 
-        const cutDepth = events.invoke('selection.cutDepth') as number;
-        const { op, viewProj, rawMask, rawIds, fromRings } = lastSelectOp;
-
-        for (const splat of selectedSplats()) {
-            if (fromRings && rawIds) {
-                // copy raw ids for re-filtering
-                const ids = new Uint32Array(rawIds);
-                const filtered = applyCutDepthToIds(splat, ids, cutDepth, viewProj);
-                events.fire('edit.add', new SelectOp(splat, op, filtered));
-            } else if (rawMask) {
-                const copy = new Uint8Array(rawMask.length);
-                copy.set(rawMask);
-                applyCutDepthToMask(splat, copy, cutDepth, viewProj);
-                events.fire('edit.add', new SelectOp(splat, op, copy));
-            }
+        if (previewTimer !== null) {
+            clearTimeout(previewTimer);
         }
+
+        previewTimer = window.setTimeout(() => {
+            previewTimer = null;
+            const cutDepth = events.invoke('selection.cutDepth') as number;
+            const { op, viewProj, rawMask, rawIds, fromRings } = lastSelectOp;
+
+            for (const splat of selectedSplats()) {
+                if (fromRings && rawIds) {
+                    const ids = new Uint32Array(rawIds);
+                    const filtered = applyCutDepthToIds(splat, ids, cutDepth, viewProj);
+                    events.fire('edit.addPreview', () => new SelectOp(splat, op, filtered));
+                } else if (rawMask) {
+                    const copy = new Uint8Array(rawMask.length);
+                    copy.set(rawMask);
+                    applyCutDepthToMask(splat, copy, cutDepth, viewProj);
+                    events.fire('edit.addPreview', () => new SelectOp(splat, op, copy));
+                }
+            }
+        }, 80);
+    });
+
+    events.on('selection.commit', () => {
+    if (!lastSelectOp) return;
+
+    if (previewTimer !== null) {
+        clearTimeout(previewTimer);
+        previewTimer = null;
+    }
+
+    events.fire('edit.commitPreview');
+    lastSelectOp = null;
     });
 
     events.function('select.rect', async (op, rect) => {
+        // cancel any pending preview from a previous cutDepth change
+        if (previewTimer !== null) {
+            clearTimeout(previewTimer);
+            previewTimer = null;
+        }
         const useDepth = events.invoke('selection.useDepth') as boolean;
         const footprint = events.invoke('selection.footprint') as number;
         const cutDepth = events.invoke('selection.cutDepth') as number;
-
-        const usePick = footprint > 0;
 
         for (const splat of selectedSplats()) {
             const viewProj = new Mat4().mul2(
@@ -498,7 +523,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 }
             }
 
-            events.fire('edit.add', new SelectOp(splat, op, data));
+            // events.fire('edit.add', new SelectOp(splat, op, data));
+            events.fire('edit.addPreview',  () => new SelectOp(splat, op, data));
             if (isMask) {
                 scene.dataProcessor.releaseMask(data as Uint8Array);
             }
@@ -573,7 +599,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 if (useDepth) {
                     ids = applyCutDepthToIds(splat, ids, cutDepth, viewProj);
                 }
-                events.fire('edit.add', new SelectOp(splat, op, ids));
+                events.fire('edit.addPreview', () => new SelectOp(splat, op, ids));
             } else {
                 if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
                     if (maskTexture) maskTexture.destroy();
@@ -596,7 +622,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     if (useDepth) {
                         applyCutDepthToMask(splat, data, cutDepth, viewProj);
                     }
-                    events.fire('edit.add', new SelectOp(splat, op, data));
+                    events.fire('edit.addPreview', () => new SelectOp(splat, op, data));
                     scene.dataProcessor.releaseMask(data);
                 });
             }
@@ -604,6 +630,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.function('select.point', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }) => {
+        lastSelectOp = null;
         const { width, height } = scene.targetSize;
         const footprint = events.invoke('selection.footprint') as number;
         const usePick = footprint > 0;
@@ -616,7 +643,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const pickResult = await scene.camera.pickRect(point.x, point.y, 1 / width, 1 / height);
                 const pickId = pickResult[0];
                 if (pickId === 0xffffffff) continue;
-                events.fire('edit.add', new SelectOp(splat, op, new Uint32Array([pickId])));
+                events.fire('edit.addPreview', () => new SelectOp(splat, op, new Uint32Array([pickId])));
             } else {
                 const x = splatData.getProp('x');
                 const y = splatData.getProp('y');
@@ -641,12 +668,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     }
                 }
 
-                events.fire('edit.add', new SelectOp(splat, op, mask));
+                events.fire('edit.addPreview', () => new SelectOp(splat, op, mask));
             }
         }
     });
 
     events.function('select.colorMatch', async (op: 'add'|'remove'|'set', point: { x: number, y: number }, threshold = 0) => {
+        lastSelectOp = null;
         const splats = selectedSplats();
         const targetSize = scene.targetSize;
         if (!splats.length || !targetSize || !point) return;
@@ -906,7 +934,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
     events.fire('camera.showInfo', showInfo);
-
     // doc serialization
 
     events.function('docSerialize.view', () => {

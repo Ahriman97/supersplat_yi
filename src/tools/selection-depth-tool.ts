@@ -46,7 +46,30 @@ class SelectionDepthTool {
         selectToolbar.append(input);
         selectToolbar.append(applyButton);
         canvasContainer.append(selectToolbar);
+        // track physical Ctrl so macOS pinch (synthetic ctrlKey) doesn't trigger
+        let physicalCtrlDown = false;
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Control') physicalCtrlDown = true;
+        }, { capture: true });
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'Control') physicalCtrlDown = false;
+        }, { capture: true });
+        window.addEventListener('blur', () => { physicalCtrlDown = false; });
 
+        // Ctrl + wheel over the canvas adjusts cutDepth while the panel is visible.
+        // capture phase + stopImmediatePropagation ensures the camera controller
+        // (also listening on #canvas-container) never sees this event.
+        canvasContainer.dom.addEventListener('wheel', (e) => {
+            if (selectToolbar.hidden) return;
+            if (!e.ctrlKey || !physicalCtrlDown) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            const direction = e.deltaY > 0 ? -1 : 1;
+            events.fire('selection.adjustCutDepth', direction * 1);
+        }, { capture: true, passive: false });
         // --- state ---
         const syncInput = (value: number) => {
             cutDepth = value;
@@ -60,7 +83,6 @@ class SelectionDepthTool {
         });
 
         applyButton.on('click', () => {
-            console.log('[applyButton] clicked');
             events.fire('selection.commit');
         });
 
@@ -82,6 +104,31 @@ class SelectionDepthTool {
             events.fire('selection.adjustCutDepth', SelectionDepthTool.STEP);
         });
 
+        // Enter commits the current preview (only while the panel is visible)
+        input.dom.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                events.fire('selection.commit');
+            }
+        });
+
+        const onGlobalKeyDown = (e: KeyboardEvent) => {
+            if (e.key !== 'Enter') return;
+            if (selectToolbar.hidden) return;
+            if (e.repeat) return;
+
+            const active = document.activeElement as HTMLElement | null;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+            events.fire('selection.commit');
+        };
+
+        window.addEventListener('keydown', onGlobalKeyDown, { capture: true });
         // --- lifecycle (passive UI, not a modal tool) ---
         this.activate = () => {};
         this.deactivate = () => {};

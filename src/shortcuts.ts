@@ -72,7 +72,10 @@ const targetConsumesKey = (e: KeyboardEvent): boolean => {
     }
     const input = target.closest('input');
     if (input && textInputTypes.has(input.type)) {
-        return true;
+        const isUndoRedo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z';
+        if (!isUndoRedo) {
+            return true;
+        }
     }
     return controlKeys.has(e.key);
 };
