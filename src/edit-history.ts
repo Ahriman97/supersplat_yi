@@ -23,17 +23,24 @@ class EditHistory {
     // and the 'queue' event, so all async splat work applies in initiation order.
     private commandQueue: CommandQueue;
 
+    // depth preview: only the cut-depth tool uses this. every other selection
+    // op goes straight into `history` via add(). this buffer is transient and
+    // never committed until the user presses Apply in the depth panel.
+    private previewDepthOp: EditOp | null = null;
+
     constructor(events: Events, commandQueue: CommandQueue) {
         this.events = events;
         this.commandQueue = commandQueue;
 
         events.on('edit.undo', () => this.undo());
         events.on('edit.redo', () => this.redo());
-        //events.on('edit.add', (editOp: EditOp, suppressOp = false) => this.add(editOp, suppressOp));
-        events.on('edit.add', (editOp: EditOp, suppressOp = false) => {
-            this.add(editOp, suppressOp);
-        });
+        events.on('edit.add', (editOp: EditOp, suppressOp = false) => this.add(editOp, suppressOp));
         events.on('edit.removeForShape', (shape: unknown) => this.removeForShape(shape));
+
+        // depth preview lifecycle
+        events.on('edit.addPreviewDepth', (makeEditOp: () => EditOp) => this.addPreviewDepth(makeEditOp));
+        events.on('edit.commitPreviewDepth', () => this.commitPreviewDepth());
+        events.on('edit.cancelPreviewDepth', () => this.cancelPreviewDepth());
     }
 
     private queue<T>(fn: () => T | Promise<T>): Promise<T> {
@@ -56,13 +63,6 @@ class EditHistory {
     undo() {
         if (this.events.invoke('editing.blocked')) return Promise.resolve();
         return this.queue(async () => {
-            if (this.previewOp) {
-                await this.previewOp.undo();
-                this.previewOp.destroy?.();
-                this.previewOp = null;
-                this.events.fire('edit.cancelPreview');
-                return;
-            }
             if (this.canUndo()) {
                 await this._undo();
             }
@@ -72,13 +72,6 @@ class EditHistory {
     redo(suppressOp = false) {
         if (this.events.invoke('editing.blocked')) return Promise.resolve();
         return this.queue(async () => {
-            // cancel active preview first
-            if (this.previewOp) {
-                await this.previewOp.undo();
-                this.previewOp.destroy?.();
-                this.previewOp = null;
-                this.events.fire('edit.cancelPreview');
-            }
             if (this.canRedo()) {
                 await this._redo(suppressOp);
             }
@@ -127,8 +120,8 @@ class EditHistory {
             this.history.forEach((editOp) => {
                 editOp.destroy?.();
             });
-            this.previewOp?.destroy?.();
-            this.previewOp = null;
+            this.previewDepthOp?.destroy?.();
+            this.previewDepthOp = null;
             this.history = [];
             this.cursor = 0;
             this.fireEvents();
@@ -189,27 +182,29 @@ class EditHistory {
         });
     }
 
-    private previewOp: EditOp | null = null;
-    
-    addPreview(makeEditOp: () => EditOp) {
+    // --- depth preview only ---
+
+    // replace the current depth preview: undo the previous one, apply the new one.
+    // does not touch history.
+    addPreviewDepth(makeEditOp: () => EditOp) {
         return this.queue(async () => {
-            if (this.previewOp) {
-                await this.previewOp.undo();
-                this.previewOp.destroy?.();
-                this.previewOp = null;
+            if (this.previewDepthOp) {
+                await this.previewDepthOp.undo();
+                this.previewDepthOp.destroy?.();
+                this.previewDepthOp = null;
             }
             const editOp = makeEditOp();
             await editOp.do();
-            this.previewOp = editOp;
+            this.previewDepthOp = editOp;
         });
     }
 
-    // фиксировать preview как настоящий op в истории
-    commitPreview() {
+    // commit the current depth preview into history (Apply button).
+    commitPreviewDepth() {
         return this.queue(async () => {
-            if (!this.previewOp) return;
-            const op = this.previewOp;
-            this.previewOp = null;
+            if (!this.previewDepthOp) return;
+            const op = this.previewDepthOp;
+            this.previewDepthOp = null;
             this.history.push(op);
             this.cursor = this.history.length;
             this.events.fire('edit.apply', op, 'do');
@@ -217,13 +212,13 @@ class EditHistory {
         });
     }
 
-    // откатить preview без фиксации
-    cancelPreview() {
+    // discard the current depth preview without committing.
+    cancelPreviewDepth() {
         return this.queue(async () => {
-            if (this.previewOp) {
-                await this.previewOp.undo();
-                this.previewOp.destroy?.();
-                this.previewOp = null;
+            if (this.previewDepthOp) {
+                await this.previewDepthOp.undo();
+                this.previewDepthOp.destroy?.();
+                this.previewDepthOp = null;
             }
         });
     }

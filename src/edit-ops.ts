@@ -143,19 +143,27 @@ class SelectOp extends StateOp {
             intersect: (i: number) => valid(i) && state[i] === State.selected && !isHit(i),
             refine: (i: number) => valid(i) && state[i] === State.selected && !isHit(i) && (splat.lastAddedMask?.[i] === 255)
         };
-    
+
         super(splat, IndexRanges.fromPredicate(splatData.numSplats, preds[op]), State.selected, bitOps[op]);
+
         if (op === 'add' || op === 'set') {
             const mask = new Uint8Array(splatData.numSplats);
-            let count = 0;
             for (let i = 0; i < splatData.numSplats; i++) {
                 if (valid(i) && isHit(i) && state[i] !== State.selected) {
                     mask[i] = 255;
-                    count++;
                 }
             }
             splat.lastAddedMask = mask;
         }
+    }
+}
+
+class HideSelectionOp extends StateOp {
+    name = 'hideSelection';
+
+    constructor(splat: Splat) {
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => state[i] === State.selected), State.locked, BitOp.SET, State.locked);
     }
 }
 
@@ -184,7 +192,6 @@ class DetectShadowsOp extends StateOp {
         // средняя яркость выделения
         let sum = 0;
         let cnt = 0;
-
         let minLum = Infinity;
         let maxLum = -Infinity;
 
@@ -215,14 +222,11 @@ class DetectShadowsOp extends StateOp {
 
         // --- Шаг 3: Подсчёт теней ---
         let shadowCount = 0;
-        const shadowMask = new Uint8Array(numSplats);
-
         for (let i = 0; i < numSplats; i++) {
             if (state[i] === State.selected) {
                 const l = lum(decode(reds[i]), decode(greens[i]), decode(blues[i]));
                 if (l < shadowThreshold) {
                     shadowCount++;
-                    shadowMask[i] = 255;
                 }
             }
         }
@@ -234,11 +238,8 @@ class DetectShadowsOp extends StateOp {
         } else if (parseFloat(shadowPct) > 50) {
             console.warn('[DetectShadows] TOO MANY SHADOWS (>50%). Try lower threshold (0.4-0.6).');
         }
-        //====
 
-        // находим тёмные — устанавливаем им selected
-        // (они уже selected, поэтому ставим locked? Нет — лучше новый флаг)
-        // Для простоты используем locked как "тень"
+        // помечаем тёмные как "тень" через locked
         super(
             splat,
             IndexRanges.fromPredicate(numSplats, (i) => {
@@ -250,19 +251,12 @@ class DetectShadowsOp extends StateOp {
             BitOp.SET,
             State.locked
         );
+
+        console.log('[DetectShadows] shadows =', shadowCount, 'of', cnt, `(${shadowPct}%)`);
     }
 
     async do() {
         await super.do();
-    }
-}
-
-class HideSelectionOp extends StateOp {
-    name = 'hideSelection';
-
-    constructor(splat: Splat) {
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => state[i] === State.selected), State.locked, BitOp.SET, State.locked);
     }
 }
 
@@ -647,9 +641,9 @@ export {
     SelectNoneOp,
     SelectInvertOp,
     SelectOp,
-    DetectShadowsOp,
     HideSelectionOp,
     UnhideAllOp,
+    DetectShadowsOp,
     DeleteSelectionOp,
     ResetOp,
     EntityTransformOp,
