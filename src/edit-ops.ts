@@ -158,6 +158,54 @@ class SelectOp extends StateOp {
     }
 }
 
+class SelectSetOp extends StateOp {
+    name = 'selectSet';
+    private oldSelected: IndexRanges;
+
+    constructor(splat: Splat, sel: Uint8Array | Uint32Array) {
+        const splatData = splat.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        const isHit = sel instanceof Uint32Array
+            ? sortedPredicate(sel)
+            : (i: number) => sel[i] === 255;
+
+        super(
+            splat,
+            IndexRanges.fromPredicate(splatData.numSplats, (i) => {
+                const s = state[i];
+                return (s === 0 || s === State.selected) && isHit(i);
+            }),
+            State.selected,
+            BitOp.SET
+        );
+
+        this.oldSelected = IndexRanges.fromPredicate(
+            splatData.numSplats,
+            (i) => (state[i] & State.selected) !== 0
+        );
+    }
+
+    async do() {
+        const state = this.splat.state;
+        const allSelected = IndexRanges.fromPredicate(
+            this.splat.splatData.numSplats,
+            (i) => (state.data[i] & State.selected) !== 0
+        );
+        state.clearBits(allSelected, State.selected);
+        state.setBits(this.ranges, State.selected);
+        await this.splat.updateState(State.selected);
+    }
+
+    async undo() {
+        const state = this.splat.state;
+        state.clearBits(this.ranges, State.selected);
+        if (!this.oldSelected.empty) {
+            state.setBits(this.oldSelected, State.selected);
+        }
+        await this.splat.updateState(State.selected);
+    }
+}
+
 class HideSelectionOp extends StateOp {
     name = 'hideSelection';
 
@@ -341,6 +389,7 @@ class SplatsTransformOp {
         this.ranges.forEach((i) => {
             indices[i] = paletteMap.get(indices[i]);
         });
+        this.splat.globalMaxExpScale = null;
 
         splat.transformTexture.unlock();
 
@@ -361,6 +410,7 @@ class SplatsTransformOp {
         const { splat, paletteMap } = this;
         const indices = splat.transformTexture.lock() as Uint16Array;
 
+
         // invert the palette map
         const inverseMap = new Map<number, number>();
         paletteMap.forEach((newIdx, oldIdx) => {
@@ -371,7 +421,7 @@ class SplatsTransformOp {
         this.ranges.forEach((i) => {
             indices[i] = inverseMap.get(indices[i]);
         });
-
+        this.splat.globalMaxExpScale = null;
         splat.transformTexture.unlock();
 
         splat.transformPalette.free(paletteMap.size);
@@ -641,6 +691,7 @@ export {
     SelectNoneOp,
     SelectInvertOp,
     SelectOp,
+    SelectSetOp,
     HideSelectionOp,
     UnhideAllOp,
     DetectShadowsOp,

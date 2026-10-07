@@ -2,6 +2,7 @@ import { CommandQueue } from './command-queue';
 import { EditOp, MultiOp } from './edit-ops';
 import { Events } from './events';
 import { Splat } from './splat';
+import { State } from './splat-state';
 
 // Check if an operation references a specific splat
 const opReferencesSplat = (op: EditOp, splat: Splat): boolean => {
@@ -49,7 +50,13 @@ class EditHistory {
 
     add(editOp: EditOp, suppressOp = false) {
         if (this.events.invoke('editing.blocked')) return Promise.resolve();
-        return this.queue(() => this._add(editOp, suppressOp));
+        return this.queue(() => {
+            const op = editOp as any;
+            console.log('[edit.add] ENTER op.name =', op.name,
+                        'splat.numSelected BEFORE =', op.splat?.numSelected,
+                        'hasPreviewDepth =', !!this.previewDepthOp);
+            return this._add(editOp, suppressOp);
+        });
     }
 
     canUndo() {
@@ -63,6 +70,7 @@ class EditHistory {
     undo() {
         if (this.events.invoke('editing.blocked')) return Promise.resolve();
         return this.queue(async () => {
+            this.cancelPreviewDepth()
             if (this.canUndo()) {
                 await this._undo();
             }
@@ -72,6 +80,7 @@ class EditHistory {
     redo(suppressOp = false) {
         if (this.events.invoke('editing.blocked')) return Promise.resolve();
         return this.queue(async () => {
+            this.cancelPreviewDepth()
             if (this.canRedo()) {
                 await this._redo(suppressOp);
             }
@@ -90,9 +99,13 @@ class EditHistory {
         // only advance the cursor after a successful undo so a thrown editOp leaves
         // history in a consistent state for subsequent undo/redo.
         const editOp = this.history[this.cursor - 1];
+        console.log('[_undo] cursor =', this.cursor, 'op =', (editOp as any).name);
         await editOp.undo();
         this.cursor--;
+        console.log('[_undo] done, cursor =', this.cursor);
         this.events.fire('edit.apply', editOp, 'undo');
+        console.log('[_undo] cursor =', this.cursor, 'history.len =', this.history.length,
+            'op =', (editOp as any).name);
         this.fireEvents();
     }
 
@@ -202,6 +215,7 @@ class EditHistory {
     // commit the current depth preview into history (Apply button).
     commitPreviewDepth() {
         return this.queue(async () => {
+            console.log('[commitPreviewDepth] previewDepthOp =', !!this.previewDepthOp);
             if (!this.previewDepthOp) return;
             const op = this.previewDepthOp;
             this.previewDepthOp = null;
@@ -214,14 +228,17 @@ class EditHistory {
 
     // discard the current depth preview without committing.
     cancelPreviewDepth() {
-        return this.queue(async () => {
-            if (this.previewDepthOp) {
-                await this.previewDepthOp.undo();
-                this.previewDepthOp.destroy?.();
+        if (this.previewDepthOp) {
+                const op = this.previewDepthOp as any;
                 this.previewDepthOp = null;
-            }
-        });
+                // снять depth-результат, НЕ восстанавливая oldSelected.
+                // oldSelected будет восстановлен следующим edit.add / следующим опом.
+                if (op.ranges) {
+                    op.splat.state.clearBits(op.ranges, State.selected);
+                    op.splat.updateState(State.selected);
+                }
+                op.destroy?.();
+        }
     }
 }
-
 export { EditHistory };

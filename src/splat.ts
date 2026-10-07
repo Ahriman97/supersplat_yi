@@ -90,6 +90,7 @@ class Splat extends Element {
     localFrameOrigin = new Vec3();
     localFrame = new Quat();
 
+    globalMaxExpScale: number | null = null;
     rebuildMaterial: (bands: number) => void;
 
     constructor(asset: Asset, rotation: Quat) {
@@ -141,7 +142,7 @@ class Splat extends Element {
         this.asset = asset;
         this.splatData = splatData;
         this.numSplats = splatData.numSplats;
-
+        this.globalMaxExpScale = null;
         // name and orientation are set on the initial bind only; a frame swap
         // (replaceData, no rotation) keeps the element's name and transform
         if (rotation) {
@@ -249,6 +250,8 @@ class Splat extends Element {
     // first sort), matching the previous per-frame load behaviour. The user's
     // transform is carried across so it persists.
     async replaceData(asset: Asset) {
+        this.globalMaxExpScale = null;
+        
         const oldEntity = this.entity;
         const oldAsset = this.asset;
         const oldStateTexture = this.stateTexture;
@@ -314,6 +317,7 @@ class Splat extends Element {
         this.numLocked = this.state.numLocked;
         this.numSelected = this.state.numSelected;
         this.numDeleted = this.state.numDeleted;
+        this.globalMaxExpScale = null;
 
         // handle splats being added or removed
         if (changedState & State.deleted) {
