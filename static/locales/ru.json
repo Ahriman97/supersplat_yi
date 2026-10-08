@@ -304,6 +304,7 @@
     "status-bar.timeline": "Временная шкала",
     "status-bar.splat-data": "Данные сплатов",
 
+    "tooltip.right-toolbar.change-visualisation": "Сменить режим визуализации",
     "tooltip.right-toolbar.splat-mode": "Режим Splat",
     "tooltip.right-toolbar.show-hide": "Показать/Скрыть сплаты",
     "tooltip.right-toolbar.orbit-camera": "Орбитальная камера",

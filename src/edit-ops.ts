@@ -168,7 +168,6 @@ class SelectSetOp extends StateOp {
         const isHit = sel instanceof Uint32Array
             ? sortedPredicate(sel)
             : (i: number) => sel[i] === 255;
-
         super(
             splat,
             IndexRanges.fromPredicate(splatData.numSplats, (i) => {
@@ -183,6 +182,18 @@ class SelectSetOp extends StateOp {
             splatData.numSplats,
             (i) => (state[i] & State.selected) !== 0
         );
+
+        const mask = new Uint8Array(splatData.numSplats);
+            let count = 0;
+            for (let i = 0; i < splatData.numSplats; i++) {
+                const s = state[i];
+                if ((s === 0 || s === State.selected) && isHit(i)) {
+                    mask[i] = 255;
+                    count++;
+                }
+            }
+        splat.lastAddedMask = mask;
+        // console.log('[SelectSetOp] lastAddedMask set, count =', count);
     }
 
     async do() {
@@ -300,7 +311,7 @@ class DetectShadowsOp extends StateOp {
             State.locked
         );
 
-        console.log('[DetectShadows] shadows =', shadowCount, 'of', cnt, `(${shadowPct}%)`);
+        // console.log('[DetectShadows] shadows =', shadowCount, 'of', cnt, `(${shadowPct}%)`);
     }
 
     async do() {

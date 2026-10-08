@@ -52,9 +52,9 @@ class EditHistory {
         if (this.events.invoke('editing.blocked')) return Promise.resolve();
         return this.queue(() => {
             const op = editOp as any;
-            console.log('[edit.add] ENTER op.name =', op.name,
-                        'splat.numSelected BEFORE =', op.splat?.numSelected,
-                        'hasPreviewDepth =', !!this.previewDepthOp);
+            //console.log('[edit.add] ENTER op.name =', op.name,
+                        // 'splat.numSelected BEFORE =', op.splat?.numSelected,
+                        // 'hasPreviewDepth =', !!this.previewDepthOp);
             return this._add(editOp, suppressOp);
         });
     }
@@ -99,13 +99,13 @@ class EditHistory {
         // only advance the cursor after a successful undo so a thrown editOp leaves
         // history in a consistent state for subsequent undo/redo.
         const editOp = this.history[this.cursor - 1];
-        console.log('[_undo] cursor =', this.cursor, 'op =', (editOp as any).name);
+        //console.log('[_undo] cursor =', this.cursor, 'op =', (editOp as any).name);
         await editOp.undo();
         this.cursor--;
-        console.log('[_undo] done, cursor =', this.cursor);
+        //console.log('[_undo] done, cursor =', this.cursor);
         this.events.fire('edit.apply', editOp, 'undo');
-        console.log('[_undo] cursor =', this.cursor, 'history.len =', this.history.length,
-            'op =', (editOp as any).name);
+        //console.log('[_undo] cursor =', this.cursor, 'history.len =', this.history.length,
+        //    'op =', (editOp as any).name);
         this.fireEvents();
     }
 
@@ -215,7 +215,7 @@ class EditHistory {
     // commit the current depth preview into history (Apply button).
     commitPreviewDepth() {
         return this.queue(async () => {
-            console.log('[commitPreviewDepth] previewDepthOp =', !!this.previewDepthOp);
+            //console.log('[commitPreviewDepth] previewDepthOp =', !!this.previewDepthOp);
             if (!this.previewDepthOp) return;
             const op = this.previewDepthOp;
             this.previewDepthOp = null;

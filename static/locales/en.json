@@ -304,6 +304,7 @@
     "status-bar.timeline": "Timeline",
     "status-bar.splat-data": "Splat Data",
 
+    "tooltip.right-toolbar.change-visualisation": "Change visualisation mode",
     "tooltip.right-toolbar.splat-mode": "Splat Mode",
     "tooltip.right-toolbar.show-hide": "Show/Hide Splats",
     "tooltip.right-toolbar.orbit-camera": "Orbit Camera",

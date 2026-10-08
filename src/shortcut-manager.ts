@@ -9,22 +9,14 @@ const isMac = platform.name === 'osx';
 // Default shortcut bindings - the source of truth for key mappings
 const defaultShortcuts: Record<string, ShortcutBinding> = {
     // Navigation
-    // 'camera.reset': { keys: ['f'], shift: 'required' },
-    // 'camera.focus': { keys: ['f'] },
-    // 'camera.toggleControlMode': { keys: ['v'] },
     'camera.reset': { codes: ['KeyF'], shift: 'required' },
     'camera.focus': { codes: ['KeyF'] },
     'camera.toggleControlMode': { codes: ['KeyV'] },
 
     // Show
-    'camera.toggleOverlay': { keys: ['Tab'] },
-    // 'camera.toggleMode': { keys: ['m'] },
-    // 'grid.toggleVisible': { keys: ['g'] },
-    // 'camera.toggleShowInfo': { keys: ['i'] },
-    // 'select.hide': { keys: ['h'] },
-    // 'select.unhide': { keys: ['h'], shift: 'required' },
-    // 'view.toggleLockedTransparency': { keys: ['h'], alt: 'required' },
-    'camera.toggleMode': { codes: ['KeyM'] },
+    // // 'camera.toggleOverlay': { keys: ['Tab'] },
+    'camera.toggleVisualisation': { keys: ['Tab'] },
+    // // 'camera.toggleMode': { codes: ['KeyM'] },
     'grid.toggleVisible': { codes: ['KeyG'] },
     'camera.toggleShowInfo': { codes: ['KeyI'] },
     'select.hide': { codes: ['KeyH'] },
@@ -41,21 +33,14 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'track.removeKey': { keys: ['Enter'], shift: 'required' },
 
     // Selection
-    // 'select.all': { keys: ['a'], ctrl: 'required', capture: true },
-    // 'select.none': { keys: ['a'], ctrl: 'required', shift: 'required', capture: true },
-    // 'select.invert': { keys: ['i'], ctrl: 'required' },
-    // 'select.delete': { keys: ['Delete', 'Backspace'] },
-    // 'selection.toggleUseDepth': { keys: ['n'] },
-    // 'selection.toggleFootprint': { keys: ['j'] },
-    // 'selection.cutDepthSmaller': { keys: ['['], shift: 'required', repeat: true },
-    // 'selection.cutDepthBigger': { keys: [']'], shift: 'required', repeat: true },
 
     'select.all': { codes: ['KeyA'], ctrl: 'required', capture: true },
     'select.none': { codes: ['KeyA'], ctrl: 'required', shift: 'required', capture: true },
     'select.invert': { codes: ['KeyI'], ctrl: 'required' },
     'select.delete': { keys: ['Delete', 'Backspace'] },
     'selection.toggleUseDepth': { codes: ['KeyN'] },
-    'selection.toggleFootprint': { codes: ['KeyJ'] },
+    // //'selection.toggleFootprint': { codes: ['KeyJ'] },
+    'selection.toggleFootprint': { codes: ['KeyM'] },
     'selection.cutDepthSmaller': { codes: ['BracketLeft'], shift: 'required', repeat: true },
     'selection.cutDepthBigger': { codes: ['BracketRight'], shift: 'required', repeat: true },
 
@@ -63,20 +48,6 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     // 1/2/3 don't fire tool.move/rotate/scale directly: while a shape
     // selection tool (box/sphere) is active they switch its gizmo mode
     // instead of switching tools (see ToolManager)
-    // 'tool.moveShortcut': { keys: ['1'] },
-    // 'tool.rotateShortcut': { keys: ['2'] },
-    // 'tool.scaleShortcut': { keys: ['3'] },
-    // 'tool.rectSelection': { keys: ['r'] },
-    // 'tool.lassoSelection': { keys: ['l'] },
-    // 'tool.polygonSelection': { keys: ['p'] },
-    // 'tool.brushSelection': { keys: ['b'] },
-    // 'tool.samSelection': { keys: ['k'] },
-    // 'tool.floodSelection': { keys: ['o'] },
-    // 'tool.eyedropperSelection': { keys: ['e'], ctrl: 'required', capture: true },
-    // 'tool.brushSelection.smaller': { keys: ['['], repeat: true },
-    // 'tool.brushSelection.bigger': { keys: [']'], repeat: true },
-    // 'tool.deactivate': { keys: ['Escape'] },
-    // 'tool.toggleCoordSpace': { keys: ['c'], shift: 'required' },
     'tool.moveShortcut': { keys: ['1'] },
     'tool.rotateShortcut': { keys: ['2'] },
     'tool.scaleShortcut': { keys: ['3'] },
@@ -93,10 +64,6 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'tool.toggleCoordSpace': { codes: ['KeyC'], shift: 'required' },
 
     // Other
-    // 'edit.undo': { keys: ['z'], ctrl: 'required', repeat: true, capture: true },
-    // 'edit.redo': { keys: ['z'], ctrl: 'required', shift: 'required', repeat: true, capture: true },
-    // 'dataPanel.toggle': { keys: ['d'], ctrl: 'required', capture: true },
-    // 'timelinePanel.toggle': { keys: ['t'], ctrl: 'required', capture: true },
     'edit.undo': { codes: ['KeyZ'], ctrl: 'required', repeat: true, capture: true },
     'edit.redo': { codes: ['KeyZ'], ctrl: 'required', shift: 'required', repeat: true, capture: true },
     'dataPanel.toggle': { codes: ['KeyD'], ctrl: 'required', capture: true },

@@ -11,7 +11,7 @@ import { findIsolatedSelectedSplats } from './isolated-splats';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { writeSplatFile } from './splat-serialize';
-import { filterByEllipse } from './data-processor/splat-ellipse-filter';
+import { filterByEllipse, filterByEllipseMask } from './data-processor/splat-ellipse-filter';
 
 const REFERENCE_SKIP = 4;
 
@@ -322,8 +322,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     };
 
     events.on('select.bySphere', async (op: 'add' | 'remove' | 'set' | 'intersect', transform: Mat4) => {
-        console.log('[cutDepth] handler, lastSelectDepthOp =', !!lastSelectDepthOp,
-            'previewTimer =', previewTimer);
+        //console.log('[cutDepth] handler, lastSelectDepthOp =', !!lastSelectDepthOp,
+        //    'previewTimer =', previewTimer);
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, { sphere: { transform } });
         }
@@ -424,8 +424,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         const useEllipse = (events.invoke('selection.footprint') as number) > 0
         && rw && rx && ry && rz && sx && sy && sz;
-        console.log('[applyCutDepthToMask] useEllipse =', useEllipse,
-            'footprint =', events.invoke('selection.footprint'));
+        //console.log('[applyCutDepthToMask] useEllipse =', useEllipse,
+        //    'footprint =', events.invoke('selection.footprint'));
         const view = splat.scene.camera.camera.viewMatrix;
         const model = splat.worldTransform;
         //////
@@ -488,7 +488,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         const useEllipse = (events.invoke('selection.footprint') as number) > 0
                 && rw && rx && ry && rz && sx && sy && sz;
-        console.log('[applyCutDepthToIds] useEllipse =', useEllipse);
+        //console.log('[applyCutDepthToIds] useEllipse =', useEllipse);
         const view = splat.scene.camera.camera.viewMatrix;
         const model = splat.worldTransform;
 
@@ -545,7 +545,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             if (!lastSelectDepthOp) return;
             const cutDepth = events.invoke('selection.cutDepth') as number;
             const { op, viewProj, rawMask, rawIds, fromRings } = lastSelectDepthOp;
-            console.log('[cutDepth] timer fired, lastSelectDepthOp =', !!lastSelectDepthOp);
+            //console.log('[cutDepth] timer fired, lastSelectDepthOp =', !!lastSelectDepthOp);
             for (const splat of selectedSplats()) {
                 if (fromRings && rawIds) {
                     const ids = new Uint32Array(rawIds);
@@ -562,7 +562,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('selection.commit', () => {
-        console.log('[selection.commit] lastSelectDepthOp =', !!lastSelectDepthOp, 'previewTimer =', previewTimer);
+        //console.log('[selection.commit] lastSelectDepthOp =', !!lastSelectDepthOp, 'previewTimer =', previewTimer);
         if (!lastSelectDepthOp) return;
 
         if (previewTimer !== null) {
@@ -575,6 +575,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.function('select.rect', async (op: 'add' | 'remove' | 'set' | 'intersect', rect: any) => {
+        
         if (previewTimer !== null) {
             clearTimeout(previewTimer);
             previewTimer = null;
@@ -584,7 +585,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const useDepth = events.invoke('selection.useDepth') as boolean;
         const footprint = events.invoke('selection.footprint') as number;
         const cutDepth = events.invoke('selection.cutDepth') as number;
-
+        //console.log('[select.rect] op =', op, 'footprint =', footprint, 'useDepth =', useDepth, 'cutDepth =', cutDepth);
         for (const splat of selectedSplats()) {
             const viewProj = new Mat4().mul2(
                 scene.camera.camera.viewMatrix,
@@ -609,7 +610,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     const t2 = performance.now();
                     const op2 = makeSelectOp(splat, op, mask);   // тут создастся SelectSetOp
                     const t3 = performance.now();
-                    console.log(`[select.rect] filterByEllipse = ${(t1-t0).toFixed(1)}ms, SelectSetOp = ${(t3-t2).toFixed(1)}ms, numSplats = ${splat.splatData.numSplats}`);
+                    //console.log(`[select.rect] filterByEllipse = ${(t1-t0).toFixed(1)}ms, SelectSetOp = ${(t3-t2).toFixed(1)}ms, numSplats = ${splat.splatData.numSplats}`);
                     if (mask) {
                         lastSelectDepthOp = {
                             op, rect, viewProj,
@@ -669,15 +670,36 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             ? new SelectSetOp(splat, data)
             : new SelectOp(splat, op, data);
         
-    events.function('select.byMask', async (op: 'add' | 'remove' | 'set' | 'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
+    events.function('select.byMask', async (
+        op: 'add' | 'remove' | 'set' | 'intersect', 
+        canvas: HTMLCanvasElement, 
+        context: CanvasRenderingContext2D,
+        useEllipse = false
+    ) => {
         events.fire('edit.cancelPreviewDepth');
         const useDepth = events.invoke('selection.useDepth') as boolean;
         const footprint = events.invoke('selection.footprint') as number;
-        const cutDepth = events.invoke('selection.cutDepth') as number;
-        const usePick = footprint > 0;
-
+        //const cutDepth = events.invoke('selection.cutDepth') as number;
+        //const usePick = footprint > 0;
+        const usePick = (footprint > 0) && !useDepth;
+        const useEllipseMask = useEllipse && (footprint > 0) && useDepth;
+        //console.log('[select.byMask] op =', op, 'useDepth =', useDepth, 'footprint =', footprint, 'usePick =', usePick, 'useEllipseMask =', useEllipseMask);
         for (const splat of selectedSplats()) {
-            if (usePick) {
+            if (useEllipseMask) {
+                const maskImg = context.getImageData(0, 0, canvas.width, canvas.height);
+                const { width, height } = scene.targetSize;
+                const data = filterByEllipseMask(splat, width, height,
+                    { canvas, data: maskImg.data }, 1);
+                const viewProj = new Mat4().mul2(scene.camera.camera.viewMatrix, splat.worldTransform);
+                lastSelectDepthOp = {
+                    op, rect: null, viewProj,
+                    rawMask: new Uint8Array(data),
+                    rawIds: null,
+                    fromRings: false
+                };
+                events.fire('edit.add', makeSelectOp(splat, op, data));
+                scene.dataProcessor.releaseMask(data);
+            } else if (usePick) {
                 const mask = context.getImageData(0, 0, canvas.width, canvas.height);
 
                 let mx0 = mask.width - 1;
@@ -978,6 +1000,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     let cameraOverlay = scene.config.camera.overlay;
     const setCameraOverlay = (enabled: boolean) => {
+        //console.log('[setCameraOverlay] enabled =', enabled, 'cameraOverlay =', cameraOverlay);
         if (enabled !== cameraOverlay) {
             cameraOverlay = enabled;
             events.fire('camera.overlay', cameraOverlay);
@@ -1110,6 +1133,7 @@ const registerEditorFunctions = (events: Events) => {
     let activeMode = 'centers';
 
     const setCameraMode = (mode: string) => {
+        //console.log('[setCameraMode] called with', mode, 'activeMode =', activeMode);
         if (mode !== activeMode) {
             activeMode = mode;
             events.fire('camera.mode', activeMode);
@@ -1117,9 +1141,19 @@ const registerEditorFunctions = (events: Events) => {
     };
 
     events.function('camera.mode', () => activeMode);
-    events.on('camera.setMode', setCameraMode);
-    events.on('camera.toggleMode', () => {
-        setCameraMode(events.invoke('camera.mode') === 'centers' ? 'rings' : 'centers');
+    events.on('camera.setMode', setCameraMode); 
+    events.on('camera.toggleVisualisation', () => {
+        const overlay = events.invoke('camera.overlay');
+        const mode = events.invoke('camera.mode');
+        //console.log('[camera.toggleVisualisation] overlay =', overlay, 'mode =', mode);
+        if (!overlay) {
+            events.fire('camera.setOverlay', true);
+            events.fire('camera.setMode', 'rings');
+        } else if (mode === 'rings') {
+            events.fire('camera.setMode', 'centers');
+        } else {
+            events.fire('camera.setOverlay', false);
+        }
     });
 
     let selectionUseDepth = false;

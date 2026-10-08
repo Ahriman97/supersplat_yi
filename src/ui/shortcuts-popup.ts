@@ -45,8 +45,9 @@ const popupConfig: Record<string, CategoryConfig> = {
     show: {
         localeKey: 'popup.shortcuts.show',
         shortcuts: [
-            { id: 'camera.toggleOverlay', localeKey: 'popup.shortcuts.toggle-splat-overlay' },
-            { id: 'camera.toggleMode', localeKey: 'popup.shortcuts.toggle-overlay-mode' },
+            { id: 'camera.toggleVisualisation', localeKey: 'popup.shortcuts.toggle-splat-overlay' },
+            // { id: 'camera.toggleOverlay', localeKey: 'popup.shortcuts.toggle-splat-overlay' },
+            // { id: 'camera.toggleMode', localeKey: 'popup.shortcuts.toggle-overlay-mode' },
             { id: 'grid.toggleVisible', localeKey: 'popup.shortcuts.toggle-grid' },
             { id: 'camera.toggleShowInfo', localeKey: 'popup.shortcuts.toggle-camera-info' },
             { id: 'select.hide', localeKey: 'popup.shortcuts.lock-selected-splats' },

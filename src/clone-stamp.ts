@@ -33,7 +33,7 @@ export const cloneGaussians = (
     const shCoeffs = SH_COEFFS_PER_CHANNEL[shBands] ?? 0;
     const numRest = shCoeffs * 3;
 
-    console.log(`[Clone] SH_BANDS = ${shBands}, f_rest count = ${numRest}`);
+    //console.log(`[Clone] SH_BANDS = ${shBands}, f_rest count = ${numRest}`);
 
     // получаем базовые свойства
     const x = splatData.getProp('x') as Float32Array;
@@ -106,9 +106,9 @@ export const cloneGaussians = (
     const offsetY = holeCenterY - donorCenterY;
     const offsetZ = holeCenterZ - donorCenterZ;
 
-    console.log(`[Clone] donor: ${donorCount} гауссианов, центр (${donorCenterX.toFixed(3)}, ${donorCenterY.toFixed(3)}, ${donorCenterZ.toFixed(3)})`);
-    console.log(`[Clone] hole:  ${holeCount} гауссианов, центр (${holeCenterX.toFixed(3)}, ${holeCenterY.toFixed(3)}, ${holeCenterZ.toFixed(3)})`);
-    console.log(`[Clone] offset: (${offsetX.toFixed(3)}, ${offsetY.toFixed(3)}, ${offsetZ.toFixed(3)})`);
+    //console.log(`[Clone] donor: ${donorCount} гауссианов, центр (${donorCenterX.toFixed(3)}, ${donorCenterY.toFixed(3)}, ${donorCenterZ.toFixed(3)})`);
+    //console.log(`[Clone] hole:  ${holeCount} гауссианов, центр (${holeCenterX.toFixed(3)}, ${holeCenterY.toFixed(3)}, ${holeCenterZ.toFixed(3)})`);
+    //console.log(`[Clone] offset: (${offsetX.toFixed(3)}, ${offsetY.toFixed(3)}, ${offsetZ.toFixed(3)})`);
 
     // создаём свойства для нового GSplatData
     const properties: any[] = [
@@ -178,7 +178,7 @@ export const cloneGaussians = (
         properties
     }]);
 
-    console.log(`[Clone] создано ${donorCount} гауссианов`);
+    //console.log(`[Clone] создано ${donorCount} гауссианов`);
 
     return {
         gsplatData,

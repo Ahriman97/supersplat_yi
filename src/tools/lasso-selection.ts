@@ -83,7 +83,8 @@ class LassoSelection {
                 'select.byMask',
                 opFromModifiers(e),
                 canvas,
-                context
+                context,
+                true
             );
         };
 

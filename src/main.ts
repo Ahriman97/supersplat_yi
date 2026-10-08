@@ -233,7 +233,7 @@ const main = async () => {
 
     // create the mask selection canvas
     const maskCanvas = document.createElement('canvas');
-    const maskContext = maskCanvas.getContext('2d');
+    const maskContext = maskCanvas.getContext('2d', { willReadFrequently: true });
     maskCanvas.setAttribute('id', 'mask-canvas');
     maskContext.globalCompositeOperation = 'copy';
 
