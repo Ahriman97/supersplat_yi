@@ -705,7 +705,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const maskImg = context.getImageData(0, 0, canvas.width, canvas.height);
                 const { width, height } = scene.targetSize;
                 const data = filterByEllipseMask(splat, width, height,
-                    { canvas, data: maskImg.data }, 1);
+                    { canvas, data: maskImg.data });
                 const viewProj = new Mat4().mul2(scene.camera.camera.viewMatrix, splat.worldTransform);
                 lastSelectDepthOp = {
                     op, rect: null, viewProj,
