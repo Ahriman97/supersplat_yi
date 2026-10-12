@@ -589,6 +589,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const useDepth = events.invoke('selection.useDepth') as boolean;
         const footprint = events.invoke('selection.footprint') as number;
         //const cutDepth = events.invoke('selection.cutDepth') as number;
+        //console.log('[select.rect] useDepth =', useDepth, 'footprint =', footprint);
         for (const splat of selectedSplats()) {
             const viewProj = new Mat4().mul2(
                 scene.camera.camera.viewMatrix,
@@ -599,6 +600,26 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             let isMask = false;
 
             if (footprint > 0) {
+                // scene.camera.pickPrep(splat, op);
+                // const pick = await scene.camera.pickRect(
+                //     rect.start.x, rect.start.y,
+                //     rect.end.x - rect.start.x, rect.end.y - rect.start.y
+                // );
+                // const ids = new Uint32Array(
+                //     new Set(pick.filter(id => id !== 0xffffffff))
+                // ).sort();
+
+                // // сохраняем контекст для depth preview: depth будет накладываться
+                // // через applyCutDepthToIds по этим ids
+                // lastSelectDepthOp = {
+                //     op, rect, viewProj,
+                //     rawMask: null,
+                //     rawIds: new Uint32Array(ids),
+                //     fromRings: true
+                // };
+
+                // data = ids;
+                // isMask = false;
                 if (useDepth) {
                     const { width, height } = scene.targetSize;
                     // const t0 = performance.now();
@@ -608,12 +629,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         x2: Math.max(rect.start.x, rect.end.x),
                         y2: Math.max(rect.start.y, rect.end.y)
                     }, 1);
-                    // const t1 = performance.now();
-                    
-                    // const t2 = performance.now();
-                    // const op2 = makeSelectOp(splat, op, mask);   // тут создастся SelectSetOp
-                    // const t3 = performance.now();
-                    //console.log(`[select.rect] filterByEllipse = ${(t1-t0).toFixed(1)}ms, SelectSetOp = ${(t3-t2).toFixed(1)}ms, numSplats = ${splat.splatData.numSplats}`);
                     if (mask) {
                         lastSelectDepthOp = {
                             op, rect, viewProj,
@@ -652,10 +667,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     rawIds: null,
                     fromRings: false
                 };
-
-                // if (useDepth) {
-                //     applyCutDepthToMask(splat, data, cutDepth, viewProj);
-                //}
             }
 
             events.fire('edit.add', makeSelectOp(splat, op, data));

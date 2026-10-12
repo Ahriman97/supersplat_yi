@@ -1,6 +1,6 @@
 import { WebPCodec, WorkerQueue } from '@playcanvas/splat-transform';
 import { Color, createGraphicsDevice } from 'playcanvas';
-// import { SelectionDepthTool } from './tools/selection-depth-tool';
+import { SelectionDepthTool } from './tools/selection-depth-tool';
 import { registerAutosaveJournal } from './autosave-journal';
 import { registerCameraPosesEvents } from './camera-poses';
 import { CommandQueue } from './command-queue';
@@ -229,7 +229,7 @@ const main = async () => {
     setUnselectedClr(toColor(sceneConfig.unselectedClr));
     setLockedClr(toColor(sceneConfig.lockedClr));
 
-    // const selectionDepthTool = new SelectionDepthTool(events, editorUI.canvasContainer);
+    const selectionDepthTool = new SelectionDepthTool(events, editorUI.canvasContainer);
 
     // create the mask selection canvas
     const maskCanvas = document.createElement('canvas');
