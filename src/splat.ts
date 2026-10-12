@@ -251,7 +251,7 @@ class Splat extends Element {
     // transform is carried across so it persists.
     async replaceData(asset: Asset) {
         this.globalMaxExpScale = null;
-        
+
         const oldEntity = this.entity;
         const oldAsset = this.asset;
         const oldStateTexture = this.stateTexture;

@@ -288,24 +288,28 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     let lastSelectDepthOp: LastSelectDepthOp | null = null;
 
     events.on('select.all', () => {
+        events.fire('selection.resetCutDepth');
         lastSelectDepthOp = null;
         events.fire('edit.cancelPreviewDepth');
         selectedSplats().forEach((splat) => events.fire('edit.add', new SelectAllOp(splat)));
     });
 
     events.on('select.none', () => {
+        events.fire('selection.resetCutDepth');
         lastSelectDepthOp = null;
         events.fire('edit.cancelPreviewDepth');
         selectedSplats().forEach((splat) => events.fire('edit.add', new SelectNoneOp(splat)));
     });
 
     events.on('select.invert', () => {
+        events.fire('selection.resetCutDepth');
         lastSelectDepthOp = null;
         events.fire('edit.cancelPreviewDepth');
         selectedSplats().forEach((splat) => events.fire('edit.add', new SelectInvertOp(splat)));
     });
 
     events.on('select.mask', (op: 'add' | 'remove' | 'set' | 'intersect' | 'refine', mask: Uint8Array | Uint32Array) => {
+        events.fire('selection.resetCutDepth');
         lastSelectDepthOp = null;
         events.fire('edit.cancelPreviewDepth');
         selectedSplats().forEach((splat) => {
@@ -322,14 +326,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     };
 
     events.on('select.bySphere', async (op: 'add' | 'remove' | 'set' | 'intersect', transform: Mat4) => {
-        //console.log('[cutDepth] handler, lastSelectDepthOp =', !!lastSelectDepthOp,
-        //    'previewTimer =', previewTimer);
+        events.fire('selection.resetCutDepth');
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, { sphere: { transform } });
         }
     });
 
     events.on('select.byBox', async (op: 'add' | 'remove' | 'set' | 'intersect', transform: Mat4) => {
+        events.fire('selection.resetCutDepth');
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, { box: { transform } });
         }
@@ -575,17 +579,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.function('select.rect', async (op: 'add' | 'remove' | 'set' | 'intersect', rect: any) => {
-        
         if (previewTimer !== null) {
             clearTimeout(previewTimer);
             previewTimer = null;
         }
+        events.fire('selection.resetCutDepth');
         lastSelectDepthOp = null;
         events.fire('edit.cancelPreviewDepth');
         const useDepth = events.invoke('selection.useDepth') as boolean;
         const footprint = events.invoke('selection.footprint') as number;
-        const cutDepth = events.invoke('selection.cutDepth') as number;
-        //console.log('[select.rect] op =', op, 'footprint =', footprint, 'useDepth =', useDepth, 'cutDepth =', cutDepth);
+        //const cutDepth = events.invoke('selection.cutDepth') as number;
         for (const splat of selectedSplats()) {
             const viewProj = new Mat4().mul2(
                 scene.camera.camera.viewMatrix,
@@ -598,18 +601,18 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             if (footprint > 0) {
                 if (useDepth) {
                     const { width, height } = scene.targetSize;
-                    const t0 = performance.now();
+                    // const t0 = performance.now();
                     const mask = filterByEllipse(splat, width, height, {
                         x1: Math.min(rect.start.x, rect.end.x),
                         y1: Math.min(rect.start.y, rect.end.y),
                         x2: Math.max(rect.start.x, rect.end.x),
                         y2: Math.max(rect.start.y, rect.end.y)
                     }, 1);
-                    const t1 = performance.now();
+                    // const t1 = performance.now();
                     
-                    const t2 = performance.now();
-                    const op2 = makeSelectOp(splat, op, mask);   // тут создастся SelectSetOp
-                    const t3 = performance.now();
+                    // const t2 = performance.now();
+                    // const op2 = makeSelectOp(splat, op, mask);   // тут создастся SelectSetOp
+                    // const t3 = performance.now();
                     //console.log(`[select.rect] filterByEllipse = ${(t1-t0).toFixed(1)}ms, SelectSetOp = ${(t3-t2).toFixed(1)}ms, numSplats = ${splat.splatData.numSplats}`);
                     if (mask) {
                         lastSelectDepthOp = {
@@ -676,6 +679,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         context: CanvasRenderingContext2D,
         useEllipse = false
     ) => {
+        events.fire('selection.resetCutDepth');
+        // lastSelectDepthOp = null;
         events.fire('edit.cancelPreviewDepth');
         const useDepth = events.invoke('selection.useDepth') as boolean;
         const footprint = events.invoke('selection.footprint') as number;
@@ -905,6 +910,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('select.isolated', () => {
+        events.fire('selection.resetCutDepth');
         events.fire('edit.cancelPreviewDepth');
         lastSelectDepthOp = null;
         const splat = events.invoke('selection') as Splat;
@@ -1192,6 +1198,13 @@ const registerEditorFunctions = (events: Events) => {
 
     events.on('selection.adjustCutDepth', (delta: number) => {
         events.fire('selection.setCutDepth', selectionCutDepth + delta);
+    });
+
+    events.on('selection.resetCutDepth', () => {
+        if (selectionCutDepth !== 0) {
+            selectionCutDepth = 0;
+            events.fire('selection.cutDepth', 0);
+        }
     });
 
     events.function('selection.footprint', () => selectionFootprint);

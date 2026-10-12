@@ -51,7 +51,8 @@ class FloodSelection {
                 'select.byMask',
                 op,
                 canvas,
-                context
+                context,
+                true
             );
         };
 

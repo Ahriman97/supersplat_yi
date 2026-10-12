@@ -66,7 +66,8 @@ class PolygonSelection {
                 'select.byMask',
                 opFromModifiers(e),
                 canvas,
-                context
+                context,
+                true
             );
 
             // clear polygon after selection completes

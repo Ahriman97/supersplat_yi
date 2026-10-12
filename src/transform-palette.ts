@@ -47,7 +47,6 @@ class TransformPalette {
             // copy over data if this is a realloc
             if (texture) {
                 newData.set(data);
-
                 texture.destroy();
             }
 
@@ -67,7 +66,6 @@ class TransformPalette {
             for (let i = 0; i < 12; ++i) {
                 data[index * 12 + i] = src[idx[i]];
             }
-
             texture.upload();
         };
 
@@ -99,8 +97,8 @@ class TransformPalette {
         realloc(width, Math.ceil(initialSize / (width / 3)));
 
         // initialize first matrix to identity
-        this.setTransform(0, Mat4.IDENTITY);
-    }
+        this.setTransform(0, Mat4.IDENTITY); 
+    }   
 }
 
 export { TransformPalette };

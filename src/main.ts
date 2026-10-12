@@ -1,6 +1,6 @@
 import { WebPCodec, WorkerQueue } from '@playcanvas/splat-transform';
 import { Color, createGraphicsDevice } from 'playcanvas';
-import { SelectionDepthTool } from './tools/selection-depth-tool';
+// import { SelectionDepthTool } from './tools/selection-depth-tool';
 import { registerAutosaveJournal } from './autosave-journal';
 import { registerCameraPosesEvents } from './camera-poses';
 import { CommandQueue } from './command-queue';
@@ -36,7 +36,7 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTrackManagerEvents } from './track-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
-import { BoundDimensionsOverlay } from './ui/bound-dimensions-overlay';
+// import { BoundDimensionsOverlay } from './ui/bound-dimensions-overlay';
 import { EditorUI } from './ui/editor';
 import { i18n } from './ui/localization';
 import { registerSelectCursor } from './ui/select-cursor';
@@ -229,7 +229,7 @@ const main = async () => {
     setUnselectedClr(toColor(sceneConfig.unselectedClr));
     setLockedClr(toColor(sceneConfig.lockedClr));
 
-    const selectionDepthTool = new SelectionDepthTool(events, editorUI.canvasContainer);
+    // const selectionDepthTool = new SelectionDepthTool(events, editorUI.canvasContainer);
 
     // create the mask selection canvas
     const maskCanvas = document.createElement('canvas');
@@ -246,7 +246,6 @@ const main = async () => {
     const toolManager = new ToolManager(events);
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom, mask));
-    //toolManager.register('selectionDepth', new SelectionDepthTool(events, editorUI.canvasContainer));
     toolManager.register('samSelection', new SamSelection(events, editorUI.toolsContainer.dom, mask, editorUI.canvasContainer));
     toolManager.register('floodSelection', new FloodSelection(events, editorUI.toolsContainer.dom, mask, editorUI.canvasContainer));
     toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom, mask));
