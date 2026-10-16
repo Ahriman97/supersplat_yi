@@ -699,7 +699,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         //const usePick = footprint > 0;
         const usePick = (footprint > 0) && !useDepth;
         const useEllipseMask = useEllipse && (footprint > 0) && useDepth;
-        //console.log('[select.byMask] op =', op, 'useDepth =', useDepth, 'footprint =', footprint, 'usePick =', usePick, 'useEllipseMask =', useEllipseMask);
+        // console.log('[select.byMask] op =', op, 'useDepth =', useDepth, 'footprint =', footprint, 'usePick =', usePick, 'useEllipseMask =', useEllipseMask);
         for (const splat of selectedSplats()) {
             if (useEllipseMask) {
                 const maskImg = context.getImageData(0, 0, canvas.width, canvas.height);
