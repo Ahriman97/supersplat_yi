@@ -450,6 +450,9 @@ class Splat extends Element {
 
         // configure rings rendering
         const material = this.entity.gsplat.instance.material;
+        material.setParameter('minPixelSize', events.invoke('view.minPixelSize') ?? 0);
+        material.setParameter('depthNear', events.invoke('view.depthNear') ?? 0);
+        material.setParameter('depthFar', events.invoke('view.depthFar') ?? 0);
         material.setParameter('outlineMode', events.invoke('view.outlineSelection') ? 1 : 0);
         material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
 

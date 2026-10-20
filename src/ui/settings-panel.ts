@@ -253,6 +253,108 @@ class SettingsPanel extends Container {
         cameraFlySpeedRow.append(cameraFlySpeedLabel);
         cameraFlySpeedRow.append(cameraFlySpeedSlider);
 
+        // min pixel size (visual only)
+        const minPixelSizeRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const minPixelSizeLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(minPixelSizeLabel, 'panel.settings.min-pixel-size'); // Убедись, что ключ есть в локализации
+
+        const minPixelSizeSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 10,
+            precision: 1,
+            value: 2 // значение по умолчанию
+        });
+
+        minPixelSizeRow.append(minPixelSizeLabel);
+        minPixelSizeRow.append(minPixelSizeSlider);
+
+        events.on('view.minPixelSize', (value: number) => {
+            minPixelSizeSlider.value = value;
+        });
+
+        minPixelSizeSlider.on('change', (value: number) => {
+            events.fire('view.setMinPixelSize', value);
+        });
+
+
+        // depth range toggle
+        const depthEnableRow = new Container({ class: 'settings-panel-row' });
+        const depthEnableLabel = new Label({ class: 'settings-panel-row-label' });
+        i18n.bindText(depthEnableLabel, 'panel.settings.depth-enable');
+        const depthEnableToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+        depthEnableRow.append(depthEnableLabel);
+        depthEnableRow.append(depthEnableToggle);
+        // depth near
+        const depthNearRow = new Container({ class: 'settings-panel-row' });
+        const depthNearLabel = new Label({ class: 'settings-panel-row-label' });
+        i18n.bindText(depthNearLabel, 'panel.settings.depth-near');
+        const depthNearSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 3000,
+            precision: 1,
+            value: 0,
+            enabled: false
+        });
+        depthNearRow.append(depthNearLabel);
+        depthNearRow.append(depthNearSlider);
+        
+
+        // depth far
+        const depthFarRow = new Container({ class: 'settings-panel-row' });
+        const depthFarLabel = new Label({ class: 'settings-panel-row-label' });
+        i18n.bindText(depthFarLabel, 'panel.settings.depth-far');
+        const depthFarSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 5000,
+            precision: 1,
+            value: 0,
+            enabled: false
+        });
+        depthFarRow.append(depthFarLabel);
+        depthFarRow.append(depthFarSlider);
+        
+
+        // events
+        events.on('view.depthNear', (value: number) => {
+            depthNearSlider.value = value;
+        });
+        events.on('view.depthFar', (value: number) => {
+            depthFarSlider.value = value;
+        });
+
+        depthNearSlider.on('change', (value: number) => {
+            events.fire('view.setDepthNear', value);
+        });
+        depthFarSlider.on('change', (value: number) => {
+            events.fire('view.setDepthFar', value);
+        });
+
+        // toggle logic
+        depthEnableToggle.on('change', (value: boolean) => {
+            depthNearSlider.enabled = value;
+            depthFarSlider.enabled = value;
+            if (!value) {
+                events.fire('view.setDepthNear', 0);
+                events.fire('view.setDepthFar', 0);
+            } else {
+                // при включении ставим дефолтные значения
+                events.fire('view.setDepthNear', 0);
+                events.fire('view.setDepthFar', 5000);
+            }
+        });
+
         // centers size
 
         const centersSizeRow = new Container({
@@ -491,6 +593,7 @@ class SettingsPanel extends Container {
         this.append(cameraFlySpeedRow);
         this.append(centersSizeRow);
         this.append(centersColorRow);
+        this.append(minPixelSizeRow);
         this.append(outlineSelectionRow);
         this.append(unifiedSplatsRow);
         this.append(showGridRow);
@@ -499,8 +602,13 @@ class SettingsPanel extends Container {
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
         this.append(showCameraInfoRow);
+        this.append(depthEnableRow);
+        this.append(depthNearRow);
+        this.append(depthFarRow);
         this.append(journalRow);
         this.append(resetRow);
+        this.append(header);
+        
 
         // handle panel visibility
 

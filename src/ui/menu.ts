@@ -69,36 +69,25 @@ class Menu extends Container {
             event.stopPropagation();
         });
 
-        const scene = new Label({
-            class: 'menu-option'
-        });
+        const scene = new Label({ class: 'menu-option' });
         i18n.bindText(scene, 'menu.file');
 
-        const edit = new Label({
-            class: 'menu-option'
-        });
+        const edit = new Label({ class: 'menu-option' });
         i18n.bindText(edit, 'menu.edit');
 
-        const render = new Label({
-            class: 'menu-option'
-        });
+        const render = new Label({ class: 'menu-option' });
         i18n.bindText(render, 'menu.render');
 
-        const selection = new Label({
-            class: 'menu-option'
-        });
+        const selection = new Label({ class: 'menu-option' });
         i18n.bindText(selection, 'menu.select');
 
-        const help = new Label({
-            class: 'menu-option'
-        });
+        const help = new Label({ class: 'menu-option' });
         i18n.bindText(help, 'menu.help');
 
         const toggleCollapsed = () => {
             document.body.classList.toggle('collapsed');
         };
 
-        // collapse menu on mobile
         if (document.body.clientWidth < 600) {
             toggleCollapsed();
         }
@@ -126,28 +115,45 @@ class Menu extends Container {
 
         menubar.append(buttonsContainer);
 
-        // Get the shortcut manager for displaying keyboard shortcuts
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
 
+        // >>> ДОБАВЛЕНО: динамический ярлык шортката, обновляется при переназначении
+        const shortcutExtra = (id: string) => {
+            const label = new Label({
+                class: 'menu-row-postscript',
+                text: shortcutManager.formatShortcut(id)
+            });
+            events.on('shortcuts.changed', (changedId: string) => {
+                if (changedId === id) {
+                    label.text = shortcutManager.formatShortcut(id);
+                }
+            });
+            return label;
+        };
+
         const exportMenuPanel = new MenuPanel([{
-            text: 'PLY (.ply)',
+            text: 'PLY (.ply)...',
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
+            extra: shortcutExtra('shortcut.exportPly'),
             onSelect: () => events.invoke('scene.export', 'ply')
         }, {
-            text: 'SOG (.sog)',
+            text: 'SOG (.sog)...',
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
+            extra: shortcutExtra('shortcut.exportSog'),
             onSelect: () => events.invoke('scene.export', 'sog')
         }, {
-            text: 'SPZ (.spz)',
+            text: 'SPZ (.spz)...',
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
+            extra: shortcutExtra('shortcut.exportSpz'),
             onSelect: () => events.invoke('scene.export', 'spz')
         }, {
-            text: 'Splat (.splat)',
+            text: 'Splat (.splat)...',
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
+            extra: shortcutExtra('shortcut.exportSplat'),
             onSelect: () => events.invoke('scene.export', 'splat')
         }, {
             // separator
@@ -155,6 +161,7 @@ class Menu extends Container {
             text: () => i18n.t('menu.file.export.viewer', { ellipsis: true }),
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
+            extra: shortcutExtra('shortcut.exportViewer'),
             onSelect: () => events.invoke('scene.export', 'viewer')
         }]);
 
@@ -164,10 +171,12 @@ class Menu extends Container {
             text: () => i18n.t('menu.file.new'),
             icon: createSvg(sceneNew),
             isEnabled: () => !events.invoke('scene.empty'),
+            extra: shortcutExtra('shortcut.new'),
             onSelect: () => events.invoke('doc.new')
         }, {
             text: () => i18n.t('menu.file.open'),
             icon: createSvg(sceneOpen),
+            extra: shortcutExtra('shortcut.open'),
             onSelect: async () => {
                 await events.invoke('doc.open');
             }
@@ -176,7 +185,6 @@ class Menu extends Container {
             icon: createSvg(sceneOpen),
             subMenu: openRecentMenuPanel,
             isEnabled: async () => {
-                // refresh open recent menu items when the parent menu is opened
                 try {
                     const items = await getOpenRecentItems(events);
                     openRecentMenuPanel.setItems(items);
@@ -192,17 +200,20 @@ class Menu extends Container {
             text: () => i18n.t('menu.file.save'),
             icon: createSvg(sceneSave),
             isEnabled: () => events.invoke('doc.name'),
+            extra: shortcutExtra('shortcut.save'),
             onSelect: async () => await events.invoke('doc.save')
         }, {
             text: () => i18n.t('menu.file.save-as', { ellipsis: true }),
             icon: createSvg(sceneSave),
             isEnabled: () => !events.invoke('scene.empty'),
+            extra: shortcutExtra('shortcut.saveAs'),
             onSelect: async () => await events.invoke('doc.saveAs')
         }, {
             // separator
         }, {
             text: () => i18n.t('menu.file.import', { ellipsis: true }),
             icon: createSvg(sceneImport),
+            extra: shortcutExtra('shortcut.import'),
             onSelect: async () => {
                 await events.invoke('scene.import');
             }
@@ -211,13 +222,15 @@ class Menu extends Container {
             icon: createSvg(sceneExport),
             subMenu: exportMenuPanel
         }, {
+            // separator
+        }, {
             text: () => i18n.t('menu.file.publish', { ellipsis: true }),
             icon: createSvg(scenePublish),
             isEnabled: () => !events.invoke('scene.empty'),
+            extra: shortcutExtra('shortcut.publish'),
             onSelect: async () => await events.invoke('show.publishSettingsDialog')
         }]);
 
-        // track undo/redo availability for menu item enablement
         let canUndo = false;
         let canRedo = false;
         events.on('edit.canUndo', (value: boolean) => {
@@ -230,13 +243,13 @@ class Menu extends Container {
         const editMenuPanel = new MenuPanel([{
             text: () => i18n.t('menu.edit.undo'),
             icon: createSvg(editUndo),
-            extra: shortcutManager.formatShortcut('edit.undo'),
+            extra: shortcutExtra('edit.undo'),
             isEnabled: () => canUndo,
             onSelect: () => events.fire('edit.undo')
         }, {
             text: () => i18n.t('menu.edit.redo'),
             icon: createSvg(editRedo),
-            extra: shortcutManager.formatShortcut('edit.redo'),
+            extra: shortcutExtra('edit.redo'),
             isEnabled: () => canRedo,
             onSelect: () => events.fire('edit.redo')
         }, {
@@ -245,60 +258,65 @@ class Menu extends Container {
             text: () => i18n.t('menu.edit.duplicate'),
             icon: createSvg(selectDuplicate),
             isEnabled: () => events.invoke('selection.splats'),
+            extra: shortcutExtra('edit.duplicate'),
             onSelect: () => events.fire('edit.duplicate')
         }, {
             text: () => i18n.t('menu.edit.separate'),
             icon: createSvg(selectSeparate),
             isEnabled: () => events.invoke('selection.splats'),
+            extra: shortcutExtra('edit.separate'),
             onSelect: () => events.fire('edit.separate')
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
             text: () => i18n.t('menu.select.all'),
             icon: createSvg(selectAll),
-            extra: shortcutManager.formatShortcut('select.all'),
+            extra: shortcutExtra('select.all'),
             onSelect: () => events.fire('select.all')
         }, {
             text: () => i18n.t('menu.select.none'),
             icon: createSvg(selectNone),
-            extra: shortcutManager.formatShortcut('select.none'),
+            extra: shortcutExtra('select.none'),
             onSelect: () => events.fire('select.none')
         }, {
             text: () => i18n.t('menu.select.invert'),
             icon: createSvg(selectInverse),
-            extra: shortcutManager.formatShortcut('select.invert'),
+            extra: shortcutExtra('select.invert'),
             onSelect: () => events.fire('select.invert')
         }, {
             // separator
         }, {
             text: () => i18n.t('menu.select.lock'),
             icon: createSvg(selectLock),
-            extra: shortcutManager.formatShortcut('select.hide'),
+            extra: shortcutExtra('select.hide'),
             isEnabled: () => events.invoke('selection.splats'),
             onSelect: () => events.fire('select.hide')
         }, {
             text: () => i18n.t('menu.select.unlock'),
             icon: createSvg(selectUnlock),
-            extra: shortcutManager.formatShortcut('select.unhide'),
+            extra: shortcutExtra('select.unhide'),
             onSelect: () => events.fire('select.unhide')
         }, {
             text: () => i18n.t('menu.select.delete'),
             icon: createSvg(selectDelete),
-            extra: shortcutManager.formatShortcut('select.delete'),
+            extra: shortcutExtra('select.delete'),
             isEnabled: () => events.invoke('selection.splats'),
             onSelect: () => events.fire('select.delete')
         }, {
             text: () => i18n.t('menu.select.reset'),
+            extra: shortcutExtra('scene.reset'),
             onSelect: () => events.fire('scene.reset')
         }]);
 
         const renderMenuPanel = new MenuPanel([{
             text: () => i18n.t('menu.render.image', { ellipsis: true }),
             icon: createSvg(sceneExport),
+            extra: shortcutExtra('shortcut.renderImage'),
             onSelect: async () => await events.invoke('show.imageSettingsDialog')
         }, {
             text: () => i18n.t('menu.render.video', { ellipsis: true }),
             icon: createSvg(sceneExport),
+            extra: shortcutExtra('shortcut.renderVideo'),
             onSelect: async () => await events.invoke('show.videoSettingsDialog')
         }]);
 
@@ -331,6 +349,7 @@ class Menu extends Container {
         }, {
             text: () => i18n.t('menu.help.shortcuts'),
             icon: 'E136',
+            extra: shortcutExtra('show.shortcuts'),
             onSelect: () => events.fire('show.shortcuts')
         }, {
             // separator
@@ -395,7 +414,7 @@ class Menu extends Container {
                 });
             };
 
-            option.dom.addEventListener('pointerdown', (event: PointerEvent) => {
+            option.dom.addEventListener('pointerdown', () => {
                 if (!option.menuPanel.hidden) {
                     option.menuPanel.hidden = true;
                 } else {
@@ -403,7 +422,7 @@ class Menu extends Container {
                 }
             });
 
-            option.dom.addEventListener('pointerenter', (event: PointerEvent) => {
+            option.dom.addEventListener('pointerenter', () => {
                 if (!options.every(opt => opt.menuPanel.hidden)) {
                     activate();
                 }

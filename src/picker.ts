@@ -111,6 +111,9 @@ class Picker {
         // Set picker uniforms
         this.device.scope.resolve('pickOp').setValue(['add', 'remove', 'set'].indexOf(pickOp));
         this.device.scope.resolve('pickMode').setValue(0);
+        
+        this.device.scope.resolve('depthNear').setValue(this.scene.events.invoke('view.depthNear') ?? 0);
+        this.device.scope.resolve('depthFar').setValue(this.scene.events.invoke('view.depthFar') ?? 0);
 
         // Render ID picking pass
         const emptyMap = new Map();
@@ -192,11 +195,14 @@ class Picker {
             s.entity.enabled = s === splat;
         });
         scene.unifiedRenderTest.beginLegacyPick(splat);
-
+        this.device.scope.resolve('minPixelSize').setValue(0)
         // Set depth estimation mode uniform
         this.device.scope.resolve('pickOp').setValue(2); // 'set' mode - don't skip any visible splats
         this.device.scope.resolve('pickMode').setValue(1);
-
+        
+        // Depth for camera view
+        this.device.scope.resolve('depthNear').setValue(0);
+        this.device.scope.resolve('depthFar').setValue(0);
         // Render scene with depth pass
         this.renderPass.blendState = this.depthBlendState;
         this.renderPass.init(this.depthRenderTarget);

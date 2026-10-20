@@ -93,6 +93,10 @@
     "panel.settings.show-camera-poses": "Show Camera Poses",
     "panel.settings.show-camera-info": "Show Camera Info",
     "panel.settings.reset": "Reset to Defaults",
+    "panel.settings.min-pixel-size": "Min splat size",
+    "panel.settings.depth-enable": "Clip Enable",
+    "panel.settings.depth-near": "Clip Start",
+    "panel.settings.depth-far": "Clip End",
 
     "panel.splat-data.position": "Position",
     "panel.splat-data.opacity": "Opacity",

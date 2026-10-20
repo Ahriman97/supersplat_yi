@@ -8,6 +8,7 @@ const storageKey = 'supersplat:preferences';
 const storageVersion = 1;
 
 type PrefValue = boolean | number | string | number[];
+type PreferenceGroup = 'appearance' | 'overlays' | 'preferences';
 
 type Descriptor = {
     // storage key, which doubles as the notify event fired when the setting changes
@@ -22,6 +23,8 @@ type Descriptor = {
     getDefault: () => any;
     // validate a stored (json) value
     validate: (value: PrefValue) => boolean;
+    // owning panel for scoped reset; omitted for toolbar-only settings
+    group?: PreferenceGroup;
     // stored (json) value -> event payload
     toEvent?: (value: PrefValue) => any;
     // notify payload -> stored (json) value
@@ -96,7 +99,10 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'camera.showInfo', setCommand: 'camera.setShowInfo', urlPath: 'show.cameraInfo', getDefault: () => config.show.cameraInfo, validate: isBool },
         { key: 'camera.mode', setCommand: 'camera.setMode', getDefault: () => 'centers', validate: isEnum(['centers', 'rings']) },
         { key: 'camera.overlay', setCommand: 'camera.setOverlay', urlPath: 'camera.overlay', getDefault: () => config.camera.overlay, validate: isBool },
-        { key: 'camera.controlMode', setCommand: 'camera.setControlMode', getDefault: () => 'orbit', validate: isEnum(['orbit', 'fly']) }
+        { key: 'camera.controlMode', setCommand: 'camera.setControlMode', getDefault: () => 'orbit', validate: isEnum(['orbit', 'fly']) },
+        { key: 'view.minPixelSize', setCommand: 'view.setMinPixelSize', getDefault: () => 2, validate: isNumber(0, 10), group: 'preferences' },
+        { key: 'view.depthNear', setCommand: 'view.setDepthNear', getDefault: () => 0, validate: isNumber(0, 10000), group: 'preferences' },
+        { key: 'view.depthFar', setCommand: 'view.setDepthFar', getDefault: () => 0, validate: isNumber(0, 10000), group: 'preferences' },
     ];
 
     // load and validate the stored blob. unknown keys and invalid values are
@@ -161,18 +167,18 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
     // apply stored preferences (or defaults) to the live state. every setting
     // is applied so side effects between settings self-heal, and the resolved
     // sceneConfig already contains url overrides, which win over stored values.
-    const apply = () => {
-        events.fire('preferences.suspend');
-        try {
-            for (const descriptor of descriptors) {
-                const stored = urlHas(descriptor.urlPath) ? undefined : values[descriptor.key];
-                const payload = stored !== undefined ? (descriptor.toEvent ? descriptor.toEvent(stored) : stored) : descriptor.getDefault();
-                events.fire(descriptor.setCommand, payload);
+    const apply = (targets = descriptors) => {
+            events.fire('preferences.suspend');
+            try {
+                for (const descriptor of targets) {
+                    const stored = urlHas(descriptor.urlPath) ? undefined : values[descriptor.key];
+                    const payload = stored !== undefined ? (descriptor.toEvent ? descriptor.toEvent(stored) : stored) : descriptor.getDefault();
+                    events.fire(descriptor.setCommand, payload);
+                }
+            } finally {
+                events.fire('preferences.resume');
             }
-        } finally {
-            events.fire('preferences.resume');
-        }
-    };
+        };
 
     apply();
 
@@ -202,14 +208,17 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
 
     // clear stored preferences and restore defaults. language lives in its
     // own store (i18nextLng) but its default is 'automatic', so reset it too.
-    events.on('preferences.reset', () => {
-        for (const key in values) {
-            delete values[key];
-        }
-        scheduleWrite();
-        apply();
-        i18n.setLanguage(null);
-    });
+    events.on('preferences.reset', (group?: PreferenceGroup) => {
+            const targets = group ? descriptors.filter(descriptor => descriptor.group === group) : descriptors;
+            for (const descriptor of targets) {
+                delete values[descriptor.key];
+            }
+            scheduleWrite();
+            apply(targets);
+            if (!group || group === 'preferences') {
+                i18n.setLanguage(null);
+            }
+        });
 };
 
 export { registerPreferences };

@@ -68,7 +68,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection', 'view.unifiedSplats',
         'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
-        'camera.showInfo', 'selection.changed', 'tool.coordSpace'
+        'camera.showInfo', 'selection.changed', 'tool.coordSpace', 'view.depthNear', 'view.depthFar', 'view.minPixelSize'
     ].forEach((eventName) => {
         events.on(eventName, () => {
             scene.forceRender = true;
@@ -275,6 +275,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return splat?.numSelected > 0;
     });
 
+    // view min pixel size
+    let minPixelSize = 2;
+    const setMinPixelSize = (value: number) => {
+        if (value !== minPixelSize) {
+            minPixelSize = value;
+            events.fire('view.minPixelSize', minPixelSize);
+        }
+    };
+    events.function('view.minPixelSize', () => minPixelSize);
+    events.on('view.setMinPixelSize', setMinPixelSize);
+
     // remember last depth selection context. only used by cut-depth.
     type LastSelectDepthOp = {
         op: 'add' | 'remove' | 'set' | 'intersect' | 'refine';
@@ -319,6 +330,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     const runSelectIntersect = (splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect', options: any) => {
         return scene.commandQueue.enqueue(async () => {
+            scene.graphicsDevice.scope.resolve('depthNear').setValue(events.invoke('view.depthNear') ?? 0);
+            scene.graphicsDevice.scope.resolve('depthFar').setValue(events.invoke('view.depthFar') ?? 0);
             const data = await scene.dataProcessor.intersect(options, splat);
             events.fire('edit.add', makeSelectOp(splat, op, data));
             scene.dataProcessor.releaseMask(data);
@@ -345,8 +358,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('edit.cancelPreviewDepth', () => editHistory.cancelPreviewDepth());
 
     // Полурадиус эллипсоида вдоль оси view-Z (в мировых единицах).
-    // Для центрального гаусса без поворота это просто max(exp(sx), exp(sy), exp(sz)).
-    // С поворотом — это проекция эллипсоида на направление камеры.
     const computeEllipseRadiusAlongViewZ = (
         qw: number, qx: number, qy: number, qz: number,
         sx: number, sy: number, sz: number,
@@ -355,7 +366,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const qLen = Math.hypot(qx, qy, qz, qw) || 1;
         const nx = qx / qLen, ny = qy / qLen, nz = qz / qLen, nw = qw / qLen;
 
-        // rotation matrix (model-space)
         const r00 = 1 - 2 * (ny * ny + nz * nz);
         const r01 = 2 * (nx * ny + nw * nz);
         const r02 = 2 * (nx * nz - nw * ny);
@@ -366,13 +376,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const r21 = 2 * (ny * nz - nw * nx);
         const r22 = 1 - 2 * (nx * nx + ny * ny);
 
-        // 3x3 model (column-major)
         const m = model.data;
         const m00 = m[0], m01 = m[4], m02 = m[8];
         const m10 = m[1], m11 = m[5], m12 = m[9];
         const m20 = m[2], m21 = m[6], m22 = m[10];
 
-        // axes of the ellipsoid (columns of R) → world space (model * R)
         const aWx = m00 * r00 + m01 * r10 + m02 * r20;
         const aWy = m10 * r00 + m11 * r10 + m12 * r20;
         const aWz = m20 * r00 + m21 * r10 + m22 * r20;
@@ -385,11 +393,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const cWy = m10 * r02 + m11 * r12 + m12 * r22;
         const cWz = m20 * r02 + m21 * r12 + m22 * r22;
 
-        // view-Z in world space = third column of view matrix
         const v = view.data;
         const zx = v[2], zy = v[6], zz = v[10];
 
-        // projections of the axes onto view-Z
         const da = aWx * zx + aWy * zy + aWz * zz;
         const db = bWx * zx + bWy * zy + bWz * zz;
         const dc = cWx * zx + cWy * zy + cWz * zz;
@@ -417,7 +423,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const x = splat.splatData.getProp('x') as Float32Array;
         const y = splat.splatData.getProp('y') as Float32Array;
         const z = splat.splatData.getProp('z') as Float32Array;
-        /////
         const rw = splat.splatData.getProp('rot_0') as Float32Array;
         const rx = splat.splatData.getProp('rot_1') as Float32Array;
         const ry = splat.splatData.getProp('rot_2') as Float32Array;
@@ -428,11 +433,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         const useEllipse = (events.invoke('selection.footprint') as number) > 0
         && rw && rx && ry && rz && sx && sy && sz;
-        //console.log('[applyCutDepthToMask] useEllipse =', useEllipse,
-        //    'footprint =', events.invoke('selection.footprint'));
         const view = splat.scene.camera.camera.viewMatrix;
         const model = splat.worldTransform;
-        //////
 
         const depths: number[] = [];
         for (let i = 0; i < mask.length; i++) {
@@ -451,7 +453,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             v4.set(x[i], y[i], z[i], 1);
             viewProj.transformVec4(v4, v4);
             const depth = -v4.z;
-            ////
             if (useEllipse) {
                 const radiusZ = computeEllipseRadiusAlongViewZ(
                     rw[i], rx[i], ry[i], rz[i],
@@ -461,11 +462,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const minDepth = depth - radiusZ;
                 if (minDepth > maxDepth) mask[i] = 0;
             } else {
-            ////
-            if (depth > maxDepth) mask[i] = 0;
-            ////
+                if (depth > maxDepth) mask[i] = 0;
             }
-            ////
         }
     };
 
@@ -481,7 +479,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const x = splat.splatData.getProp('x') as Float32Array;
         const y = splat.splatData.getProp('y') as Float32Array;
         const z = splat.splatData.getProp('z') as Float32Array;
-        ////
         const rw = splat.splatData.getProp('rot_0') as Float32Array;
         const rx = splat.splatData.getProp('rot_1') as Float32Array;
         const ry = splat.splatData.getProp('rot_2') as Float32Array;
@@ -492,11 +489,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         const useEllipse = (events.invoke('selection.footprint') as number) > 0
                 && rw && rx && ry && rz && sx && sy && sz;
-        //console.log('[applyCutDepthToIds] useEllipse =', useEllipse);
         const view = splat.scene.camera.camera.viewMatrix;
         const model = splat.worldTransform;
 
-        ////
         const depths: number[] = [];
         for (let k = 0; k < ids.length; k++) {
             const i = ids[k];
@@ -516,22 +511,19 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             v4.set(x[i], y[i], z[i], 1);
             viewProj.transformVec4(v4, v4);
             const depth = -v4.z;
-            ////
-        let keep: boolean;
-        if (useEllipse) {
-            const radiusZ = computeEllipseRadiusAlongViewZ(
-                rw[i], rx[i], ry[i], rz[i],
-                sx[i], sy[i], sz[i],
-                view, model
-            );
-            keep = (depth - radiusZ) <= maxDepth;
-                } else {
-                    keep = depth <= maxDepth;
-                }
-                if (keep) filtered.push(i);
+            let keep: boolean;
+            if (useEllipse) {
+                const radiusZ = computeEllipseRadiusAlongViewZ(
+                    rw[i], rx[i], ry[i], rz[i],
+                    sx[i], sy[i], sz[i],
+                    view, model
+                );
+                keep = (depth - radiusZ) <= maxDepth;
+            } else {
+                keep = depth <= maxDepth;
             }
-            ////
-            ////if (depth <= maxDepth) filtered.push(i); - сними после отладки
+            if (keep) filtered.push(i);
+        }
         return new Uint32Array(filtered) as Uint32Array<ArrayBuffer>;
     };
 
@@ -549,7 +541,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             if (!lastSelectDepthOp) return;
             const cutDepth = events.invoke('selection.cutDepth') as number;
             const { op, viewProj, rawMask, rawIds, fromRings } = lastSelectDepthOp;
-            //console.log('[cutDepth] timer fired, lastSelectDepthOp =', !!lastSelectDepthOp);
             for (const splat of selectedSplats()) {
                 if (fromRings && rawIds) {
                     const ids = new Uint32Array(rawIds);
@@ -566,7 +557,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('selection.commit', () => {
-        //console.log('[selection.commit] lastSelectDepthOp =', !!lastSelectDepthOp, 'previewTimer =', previewTimer);
         if (!lastSelectDepthOp) return;
 
         if (previewTimer !== null) {
@@ -588,8 +578,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('edit.cancelPreviewDepth');
         const useDepth = events.invoke('selection.useDepth') as boolean;
         const footprint = events.invoke('selection.footprint') as number;
-        //const cutDepth = events.invoke('selection.cutDepth') as number;
-        //console.log('[select.rect] useDepth =', useDepth, 'footprint =', footprint);
+
         for (const splat of selectedSplats()) {
             const viewProj = new Mat4().mul2(
                 scene.camera.camera.viewMatrix,
@@ -600,29 +589,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             let isMask = false;
 
             if (footprint > 0) {
-                // scene.camera.pickPrep(splat, op);
-                // const pick = await scene.camera.pickRect(
-                //     rect.start.x, rect.start.y,
-                //     rect.end.x - rect.start.x, rect.end.y - rect.start.y
-                // );
-                // const ids = new Uint32Array(
-                //     new Set(pick.filter(id => id !== 0xffffffff))
-                // ).sort();
-
-                // // сохраняем контекст для depth preview: depth будет накладываться
-                // // через applyCutDepthToIds по этим ids
-                // lastSelectDepthOp = {
-                //     op, rect, viewProj,
-                //     rawMask: null,
-                //     rawIds: new Uint32Array(ids),
-                //     fromRings: true
-                // };
-
-                // data = ids;
-                // isMask = false;
                 if (useDepth) {
                     const { width, height } = scene.targetSize;
-                    // const t0 = performance.now();
                     const mask = filterByEllipse(splat, width, height, {
                         x1: Math.min(rect.start.x, rect.end.x),
                         y1: Math.min(rect.start.y, rect.end.y),
@@ -636,7 +604,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                             rawIds: null,
                             fromRings: false
                         };
-                        // applyCutDepthToMask(splat, mask, cutDepth, viewProj);
                         data = mask;
                         isMask = true;
                     } else {
@@ -654,6 +621,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     isMask = false;
                 }
             } else {
+                // Передаем depthNear и depthFar перед вызовом dataProcessor
+                scene.graphicsDevice.scope.resolve('depthNear').setValue(events.invoke('view.depthNear') ?? 0);
+                scene.graphicsDevice.scope.resolve('depthFar').setValue(events.invoke('view.depthFar') ?? 0);
+                
                 data = await scene.dataProcessor.intersect({
                     rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                 }, splat);
@@ -691,15 +662,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         useEllipse = false
     ) => {
         events.fire('selection.resetCutDepth');
-        // lastSelectDepthOp = null;
         events.fire('edit.cancelPreviewDepth');
         const useDepth = events.invoke('selection.useDepth') as boolean;
         const footprint = events.invoke('selection.footprint') as number;
-        //const cutDepth = events.invoke('selection.cutDepth') as number;
-        //const usePick = footprint > 0;
         const usePick = (footprint > 0) && !useDepth;
         const useEllipseMask = useEllipse && (footprint > 0) && useDepth;
-        // console.log('[select.byMask] op =', op, 'useDepth =', useDepth, 'footprint =', footprint, 'usePick =', usePick, 'useEllipseMask =', useEllipseMask);
         for (const splat of selectedSplats()) {
             if (useEllipseMask) {
                 const maskImg = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -739,7 +706,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const ny1 = (my1 + 1) / mask.height;
                 const nw = nx1 - nx0;
                 const nh = ny1 - ny0;
-
                 scene.camera.pickPrep(splat, op);
                 const pick = await scene.camera.pickRect(nx0, ny0, nw, nh);
 
@@ -772,10 +738,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     fromRings: true
                 };
 
-                // if (useDepth) {
-                //     ids = applyCutDepthToIds(splat, ids, cutDepth, viewProj);
-                // }
-
                 events.fire('edit.add', new SelectOp(splat, op, ids));
             } else {
                 if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
@@ -785,6 +747,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 maskTexture.setSource(canvas);
 
                 await scene.commandQueue.enqueue(async () => {
+                    //console.log('setting depthLimit in scope:', events.invoke('view.depthLimit'));
+                    scene.graphicsDevice.scope.resolve('depthNear').setValue(events.invoke('view.depthNear') ?? 0);
+                    scene.graphicsDevice.scope.resolve('depthFar').setValue(events.invoke('view.depthFar') ?? 0);
                     const data = await scene.dataProcessor.intersect({ mask: maskTexture }, splat);
                     const viewProj = new Mat4().mul2(scene.camera.camera.viewMatrix, splat.worldTransform);
                     const raw = new Uint8Array(data.length);
@@ -796,10 +761,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         rawIds: null,
                         fromRings: false
                     };
-
-                    // if (useDepth) {
-                    //     applyCutDepthToMask(splat, data, cutDepth, viewProj);
-                    // }
 
                     events.fire('edit.add', makeSelectOp(splat, op, data));
                     scene.dataProcessor.releaseMask(data);
@@ -844,11 +805,24 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                 const numSplats = splatData.numSplats;
                 const mask = new Uint8Array(numSplats);
+                
+                const depthNear = events.invoke('view.depthNear') as number;
+                const depthFar = events.invoke('view.depthFar') as number;
+                const v4 = new Vec4();
+
                 for (let i = 0; i < numSplats; i++) {
-                    vec4.set(x[i], y[i], z[i], 1.0);
-                    mat.transformVec4(vec4, vec4);
-                    const px = (vec4.x / vec4.w * 0.5 + 0.5) * width;
-                    const py = (-vec4.y / vec4.w * 0.5 + 0.5) * height;
+                    v4.set(x[i], y[i], z[i], 1.0);
+                    mat.transformVec4(v4, v4);
+
+                // Проверка дистанции (диапазон)
+                const distance = Math.abs(v4.w);
+                    if (depthFar > 0 && (distance < depthNear || distance > depthFar)) {
+                        continue;
+                    }
+
+                    const px = (v4.x / v4.w * 0.5 + 0.5) * width;
+                    const py = (-v4.y / v4.w * 0.5 + 0.5) * height;
+                    
                     if (Math.abs(px - sx) < splatSize && Math.abs(py - sy) < splatSize) {
                         mask[i] = 255;
                     }
@@ -901,7 +875,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     mask[i] = 255;
                 }
             }
-
             events.fire('edit.add', new SelectOp(splat, op, mask));
         }
     });
@@ -1017,7 +990,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     let cameraOverlay = scene.config.camera.overlay;
     const setCameraOverlay = (enabled: boolean) => {
-        //console.log('[setCameraOverlay] enabled =', enabled, 'cameraOverlay =', cameraOverlay);
         if (enabled !== cameraOverlay) {
             cameraOverlay = enabled;
             events.fire('camera.overlay', cameraOverlay);
@@ -1040,6 +1012,29 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.function('camera.splatSize', () => splatSize);
     events.on('camera.setSplatSize', setSplatSize);
+
+    // view depth limit
+
+    let depthNear = 0;
+    let depthFar = 0;
+
+    const setDepthNear = (value: number) => {
+        if (value !== depthNear) {
+            depthNear = value;
+            events.fire('view.depthNear', depthNear);
+        }
+    };
+    events.function('view.depthNear', () => depthNear);
+    events.on('view.setDepthNear', setDepthNear);
+
+    const setDepthFar = (value: number) => {
+        if (value !== depthFar) {
+            depthFar = value;
+            events.fire('view.depthFar', depthFar);
+        }
+    };
+    events.function('view.depthFar', () => depthFar);
+    events.on('view.setDepthFar', setDepthFar);
 
     // camera fly speed
 
@@ -1150,7 +1145,6 @@ const registerEditorFunctions = (events: Events) => {
     let activeMode = 'centers';
 
     const setCameraMode = (mode: string) => {
-        //console.log('[setCameraMode] called with', mode, 'activeMode =', activeMode);
         if (mode !== activeMode) {
             activeMode = mode;
             events.fire('camera.mode', activeMode);
@@ -1162,7 +1156,6 @@ const registerEditorFunctions = (events: Events) => {
     events.on('camera.toggleVisualisation', () => {
         const overlay = events.invoke('camera.overlay');
         const mode = events.invoke('camera.mode');
-        //console.log('[camera.toggleVisualisation] overlay =', overlay, 'mode =', mode);
         if (!overlay) {
             events.fire('camera.setOverlay', true);
             events.fire('camera.setMode', 'rings');

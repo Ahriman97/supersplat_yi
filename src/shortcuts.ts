@@ -94,6 +94,14 @@ class Shortcuts {
             const isShiftKey = e.code.startsWith('Shift');
             const isAltKey = e.code.startsWith('Alt');
 
+            // A letter key on a non-Latin layout (Cyrillic, Greek...) reports
+            // its own character; letter shortcuts then go by the key's position,
+            // which those layouts share with QWERTY. Latin layouts keep matching
+            // by character, so AZERTY and QWERTZ users get the letter they press.
+            const key = (e.key.length === 1 && !/[a-z]/i.test(e.key) && /^Key[A-Z]$/.test(e.code)) ?
+                e.code.slice(3).toLowerCase() :
+                e.key.toLowerCase();
+
             for (let i = 0; i < shortcuts.length; i++) {
                 const options = shortcuts[i];
 
@@ -102,7 +110,7 @@ class Shortcuts {
                 const altMatch = isAltKey || checkMod(options.alt, e.altKey);
 
                 // Match if key matches keys array OR code matches codes array
-                const keyMatches = (options.keys?.some(k => k.toLowerCase() === e.key.toLowerCase()) ||
+                const keyMatches = (options.keys?.some(k => k.toLowerCase() === key) ||
                                     options.codes?.some(c => c === e.code)) ?? false;
 
                 if (keyMatches &&

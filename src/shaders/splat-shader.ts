@@ -6,6 +6,9 @@ uniform sampler2D splatState;
 uniform vec4 selectedClr;
 uniform vec4 lockedClr;
 uniform float transparentLocked;
+uniform float depthNear;
+uniform float depthFar;
+uniform float minPixelSize;
 
 uniform vec3 clrOffset;
 uniform vec4 clrScale;
@@ -93,6 +96,33 @@ void main(void) {
     );
 
     #if PICK_PASS
+        // >>> ПРОВЕРКА ДИСТАНЦИИ ДЛЯ PICKING
+        if (depthFar > 0.0) {
+            float distance = length(center.view);
+            if (distance < depthNear || distance > depthFar) {
+                // скрываем, только если не выделен
+                #if PICK_PASS
+                    if ((vertexState & 1u) == 0u) {
+                        gl_Position = discardVec;
+                        return;
+                    }
+                #else
+                    gl_Position = discardVec;
+                    return;
+                #endif
+            }
+        }
+        // Проверка размера
+        if (pickMode == 0 && minPixelSize > 0.0) {
+            float sizePx = length(corner.offset) * center.projMat00;
+            if (sizePx < minPixelSize) {
+                if ((vertexState & 1u) == 0u) {
+                    gl_Position = discardVec;
+                    return;
+                }
+            }
+        }
+
         if (pickMode == 1) {
             // depth estimation mode: compute normalized depth in vertex shader
             float linearDepth = -center.view.z;
@@ -106,6 +136,22 @@ void main(void) {
         }
     // handle splat color
     #elif FORWARD_PASS
+        if (depthFar > 0.0) {
+            float distance = length(center.view);
+            if (distance < depthNear || distance > depthFar) {
+                // скрываем, только если не выделен
+                #if PICK_PASS
+                    if ((vertexState & 1u) == 0u) {
+                        gl_Position = discardVec;
+                        return;
+                    }
+                #else
+                    gl_Position = discardVec;
+                    return;
+                #endif
+            }
+        }
+
         // read color
         color = getColor();
 
@@ -137,14 +183,11 @@ void main(void) {
 
         // apply locked/selected colors
         if ((vertexState & 2u) != 0u) {
-            // locked splats can be shown in their regular dimmed state or made
-            // fully transparent via the view.toggleLockedTransparency hotkey.
             color *= lockedClr;
             if (transparentLocked > 0.5) {
                 color.a = 0.0;
             }
         } else if ((vertexState & 1u) != 0u) {
-            // selected
             color.xyz = mix(color.xyz, selectedClr.xyz, selectedClr.a);
         }
     #endif
@@ -183,8 +226,6 @@ void main(void) {
             if (alpha < 1.0 / 255.0) {
                 discard;
             }
-            // we should multiply by alpha here to take into account gaussian falloff,
-            // but it results in less accurate depth for some reason
             gl_FragColor = color * alpha;
         } else {
             // pick id

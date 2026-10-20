@@ -6,6 +6,8 @@ const vertexShader = /* glsl */ `
 `;
 
 const fragmentShader = /* glsl */ `
+    uniform float depthNear;
+    uniform float depthFar;                       // hide splats away from camera
     uniform highp usampler2D transformA;            // splat center x, y, z
     uniform highp usampler2D splatTransform;        // transform palette index
     uniform sampler2D transformPalette;             // palette of transforms
@@ -74,6 +76,14 @@ const fragmentShader = /* glsl */ `
             if (mode == 0 || mode == 1) {
                 // screen-space modes: project to clip space and skip offscreen fragments
                 vec4 clip = matrix_viewProjection * vec4(world, 1.0);
+                
+                if (depthFar > 0.0) {
+                    float distance = abs(clip.w);
+                    if (distance < depthNear || distance > depthFar) {
+                        continue;
+                    }
+                }
+
                 vec3 ndc = clip.xyz / clip.w;
 
                 if (!any(greaterThan(abs(ndc), vec3(1.0)))) {

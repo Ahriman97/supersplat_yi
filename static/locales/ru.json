@@ -93,6 +93,10 @@
     "panel.settings.show-camera-poses": "Показать камеры",
     "panel.settings.show-camera-info": "Показать информацию о камере",
     "panel.settings.reset": "Сбросить настройки",
+    "panel.settings.min-pixel-size": "Минимальный размер сплата",
+    "panel.settings.depth-enable": "Ограничение отображения",
+    "panel.settings.depth-near": "Начало отображения",
+    "panel.settings.depth-far": "Конец отображения",
 
     "panel.splat-data.position": "Позиция",
     "panel.splat-data.opacity": "Непрозрачность",
